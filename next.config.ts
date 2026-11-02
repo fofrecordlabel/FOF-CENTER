@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [{ source: "/finance", destination: "/catalog", permanent: false }];
   },
-  serverExternalPackages: [],
+  serverExternalPackages: ["node:sqlite"],
   webpack: (config, { isServer }) => {
     if (isServer) {
       const current = config.externals;

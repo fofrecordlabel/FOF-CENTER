@@ -33,14 +33,31 @@ import type {
 
 const globalForDb = globalThis as unknown as { fofDb?: DatabaseSync };
 
+function databaseFile() {
+  const localDir = path.join(process.cwd(), "data");
+  try {
+    fs.mkdirSync(localDir, { recursive: true });
+    const probe = path.join(localDir, ".write-test");
+    fs.writeFileSync(probe, "ok");
+    fs.unlinkSync(probe);
+    return path.join(localDir, "fof.db");
+  } catch {
+    const tmpDir = path.join("/tmp", "fof-records");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    return path.join(tmpDir, "fof.db");
+  }
+}
+
 export function getDb() {
   if (!globalForDb.fofDb) {
-    const dir = path.join(process.cwd(), "data");
-    fs.mkdirSync(dir, { recursive: true });
-    const db = new DatabaseSync(path.join(dir, "fof.db"));
-    db.exec("PRAGMA journal_mode = WAL");
+    const db = new DatabaseSync(databaseFile());
     db.exec("PRAGMA foreign_keys = ON");
     db.exec("PRAGMA busy_timeout = 5000");
+    try {
+      db.exec("PRAGMA journal_mode = WAL");
+    } catch {
+      // Some hosts reject WAL. The desk still opens.
+    }
     globalForDb.fofDb = db;
   }
   migrate(globalForDb.fofDb);
