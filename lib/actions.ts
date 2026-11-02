@@ -19,6 +19,7 @@ import {
   getRelease,
   getRoyalty,
   getSplit,
+  getTodo,
   getTrack,
   linkPerson,
   logActivity,
@@ -495,6 +496,37 @@ export async function deleteLog(formData: FormData) {
   const next = safePath(str(formData, "next"), "/log");
   if (!id || !getLog(id)) go(next);
   run(next, () => destroy("logs", id));
+}
+
+export async function createTodo(formData: FormData) {
+  const next = safePath(str(formData, "next"), "/");
+  const title = str(formData, "title", 200);
+  if (!title) go(next, "A to-do needs a line.");
+  run(next, () => {
+    writeRow("todos", null, {
+      todo_date: day(formData, "todo_date") ?? today(),
+      title,
+      done: 0,
+      created_at: now(),
+    });
+  });
+}
+
+export async function toggleTodo(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), "/");
+  const todo = id ? getTodo(id) : null;
+  if (!todo) go(next);
+  run(next, () => {
+    writeRow("todos", todo.id, { done: todo.done ? 0 : 1 });
+  });
+}
+
+export async function deleteTodo(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), "/");
+  if (!id || !getTodo(id)) go(next);
+  run(next, () => destroy("todos", id));
 }
 
 export async function markLogDone(formData: FormData) {

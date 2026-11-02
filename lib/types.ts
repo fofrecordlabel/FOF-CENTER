@@ -207,6 +207,14 @@ export type Campaign = {
   created_at: string;
 };
 
+export type Todo = {
+  id: string;
+  todo_date: string;
+  title: string;
+  done: number;
+  created_at: string;
+};
+
 export type CampaignBooking = {
   id: string;
   campaign_id: string;

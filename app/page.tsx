@@ -1,22 +1,27 @@
 import Link from "next/link";
 import { clearSampleDesk } from "@/lib/actions";
 import { ConfirmSubmit } from "@/components/controls";
+import { DailyTodos, PostNotifications } from "@/components/DeskToday";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
-import { Balance, Mono, PageHeader, Pill } from "@/components/ui";
-import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, rosterRows } from "@/lib/db";
+import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
+import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, listTodos, rosterRows } from "@/lib/db";
 import { ago, compact, money, prettyDate, today } from "@/lib/format";
 import { LOG_KINDS, STAGES, labelFor, priorityTone, statusTone, RELEASE_STATUSES } from "@/lib/labels";
 
 export const metadata = { title: "Desk" };
 
-export default function DeskPage() {
+export default async function DeskPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams;
   const desk = dashboard();
   const sample = hasSample();
   const roster = rosterRows();
   const artists = listArtists();
   const listenerLogs = listListenerLogs();
-  const doneLogs = listLogs().filter((entry) => entry.status !== "planned");
+  const logs = listLogs();
+  const doneLogs = logs.filter((entry) => entry.status !== "planned");
   const todayLogs = doneLogs.filter((entry) => entry.log_date === today()).slice(0, 8);
+  const duePosts = logs.filter((entry) => entry.status === "planned" && entry.kind === "post" && entry.log_date <= today());
+  const todos = listTodos();
 
   return (
     <>
@@ -37,6 +42,12 @@ export default function DeskPage() {
           Add artist
         </Link>
       </PageHeader>
+      <Banner message={error} />
+
+      <section className="section stack">
+        <PostNotifications posts={duePosts} />
+        <DailyTodos todos={todos} />
+      </section>
 
       <section className="section stack">
         {artists.map((artist) => (

@@ -367,6 +367,9 @@ details.drawer[open] summary { margin-bottom: 12px; }
 }
 .ready.ok { background: #ffffff; color: #000000; }
 .split-list { display: grid; gap: 4px; margin-top: 8px; }
+.notice { border-color: #ffffff; }
+.done-line { opacity: 0.55; }
+.done-line strong { text-decoration: line-through; }
 
 @media (max-width: 980px) {
   .stats, .mini-stats { grid-template-columns: 1fr 1fr; }

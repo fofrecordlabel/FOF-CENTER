@@ -27,6 +27,7 @@ import type {
   ReleaseView,
   Royalty,
   RoyaltyView,
+  Todo,
   Track,
   TrackView,
 } from "./types";
@@ -288,6 +289,16 @@ function migrate(db: DatabaseSync) {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS todos (
+      id TEXT PRIMARY KEY,
+      todo_date TEXT NOT NULL,
+      title TEXT NOT NULL,
+      done INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_todos_date ON todos(todo_date);
+
     CREATE TABLE IF NOT EXISTS campaign_bookings (
       id TEXT PRIMARY KEY,
       campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
@@ -321,6 +332,7 @@ function ensureLiveDesk(db: DatabaseSync) {
   transaction(db, () => {
     db.exec(`
       DELETE FROM activity;
+      DELETE FROM todos;
       DELETE FROM campaign_bookings;
       DELETE FROM campaigns;
       DELETE FROM splits;
@@ -452,6 +464,14 @@ export function listLogs() {
      LEFT JOIN artists ON artists.id = logs.artist_id
      ORDER BY logs.log_date DESC, logs.created_at DESC`
   );
+}
+
+export function listTodos() {
+  return many<Todo>("SELECT * FROM todos ORDER BY todo_date ASC, created_at ASC");
+}
+
+export function getTodo(id: string) {
+  return one<Todo>("SELECT * FROM todos WHERE id = ?", id);
 }
 
 export function listListenerLogs(artistId?: string) {
