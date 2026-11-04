@@ -14,7 +14,7 @@ export default async function EditArtistPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
-  const artist = getArtist(id);
+  const artist = await getArtist(id);
   if (!artist) notFound();
   return (
     <>

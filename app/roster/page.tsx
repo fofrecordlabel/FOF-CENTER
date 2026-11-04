@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PageHeader, Pill, Balance } from "@/components/ui";
+import { PageHeader, Pill, Balance, Mono } from "@/components/ui";
 import { rosterRows } from "@/lib/db";
 import { compact, money, rate } from "@/lib/format";
 import { DEAL_TYPES, ROSTER_STAGES, STAGES, labelFor, stageTone } from "@/lib/labels";
@@ -9,7 +9,7 @@ export const metadata = { title: "Roster" };
 export default async function RosterPage({ searchParams }: { searchParams: Promise<{ stage?: string }> }) {
   const { stage } = await searchParams;
   const active = ROSTER_STAGES.some((item) => item.value === stage) ? stage : "all";
-  const rows = rosterRows().filter((row) => active === "all" || row.artist.stage === active);
+  const rows = (await rosterRows()).filter((row) => active === "all" || row.artist.stage === active);
 
   return (
     <>
@@ -51,16 +51,19 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
             <tbody>
               {rows.map((row) => (
                 <tr key={row.artist.id}>
-                  <td>
-                    <Link className="rowlink" href={`/artists/${row.artist.id}`}>
-                      {row.artist.name}
-                    </Link>
+                  <td data-label="Artist">
+                    <div className="brand-name">
+                      <Mono name={row.artist.name} image={row.artist.image_url} />
+                      <Link className="rowlink" href={`/artists/${row.artist.id}`}>
+                        {row.artist.name}
+                      </Link>
+                    </div>
                     <div className="meta">{[row.artist.genre, row.artist.base_city, row.artist.ar_rep].filter(Boolean).join(" · ")}</div>
                   </td>
-                  <td>
+                  <td data-label="Stage">
                     <Pill tone={stageTone(row.artist.stage)}>{labelFor(STAGES, row.artist.stage)}</Pill>
                   </td>
-                  <td>
+                  <td data-label="Deal">
                     {row.deal ? (
                       <>
                         {labelFor(DEAL_TYPES, row.deal.deal_type)}
@@ -70,9 +73,9 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
                       <span className="meta">No deal</span>
                     )}
                   </td>
-                  <td className="num">{compact(row.artist.monthly_listeners)}</td>
-                  <td className="num">{money(row.advance)}</td>
-                  <td className="num">
+                  <td className="num" data-label="Listeners">{compact(row.artist.monthly_listeners)}</td>
+                  <td className="num" data-label="Advance">{money(row.advance)}</td>
+                  <td className="num" data-label="Balance">
                     <Balance cents={row.balance} />
                   </td>
                 </tr>

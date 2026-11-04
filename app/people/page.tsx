@@ -10,7 +10,7 @@ export const metadata = { title: "Directory" };
 
 export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const people = listPeople();
+  const people = await listPeople();
 
   return (
     <>

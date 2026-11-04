@@ -12,16 +12,20 @@ export const metadata = { title: "Desk" };
 
 export default async function DeskPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const desk = dashboard();
-  const sample = hasSample();
-  const roster = rosterRows();
-  const artists = listArtists();
-  const listenerLogs = listListenerLogs();
-  const logs = listLogs();
+  const desk = await dashboard();
+  const sample = await hasSample();
+  const roster = await rosterRows();
+  const artists = await listArtists();
+  const listenerLogs = await listListenerLogs();
+  const logs = await listLogs();
   const doneLogs = logs.filter((entry) => entry.status !== "planned");
+  const todayCount = doneLogs.filter((entry) => entry.log_date === today()).length;
   const todayLogs = doneLogs.filter((entry) => entry.log_date === today()).slice(0, 8);
+  const todos = await listTodos();
+  const openTodos = todos.filter((todo) => todo.done === 0);
+  const listenerTotal = artists.reduce((sum, artist) => sum + (artist.monthly_listeners ?? 0), 0);
+  const hasListeners = artists.some((artist) => artist.monthly_listeners != null);
   const duePosts = logs.filter((entry) => entry.status === "planned" && entry.kind === "post" && entry.log_date <= today());
-  const todos = listTodos();
 
   return (
     <>
@@ -44,12 +48,26 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
       </PageHeader>
       <Banner message={error} />
 
-      <section className="section stack">
-        <PostNotifications posts={duePosts} />
-        <DailyTodos todos={todos} />
+      <section className="glance" aria-label="Desk at a glance">
+        <a className="glance-card" href="#listeners">
+          <b>{hasListeners ? compact(listenerTotal) : "—"}</b>
+          <span>Monthly listeners</span>
+        </a>
+        <Link className="glance-card" href="/checklist">
+          <b>{openTodos.length}</b>
+          <span>Open checks</span>
+        </Link>
+        <a className="glance-card" href="#today">
+          <b>{duePosts.length}</b>
+          <span>Posts due</span>
+        </a>
+        <Link className="glance-card" href="/log">
+          <b>{todayCount}</b>
+          <span>Logged today</span>
+        </Link>
       </section>
 
-      <section className="section stack">
+      <section className="section stack" id="listeners">
         {artists.map((artist) => (
           <ListenerBoard
             key={artist.id}
@@ -61,7 +79,12 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
         ))}
       </section>
 
-      <section className="stats">
+      <section className="section stack" id="today">
+        <PostNotifications posts={duePosts} />
+        <DailyTodos todos={todos} />
+      </section>
+
+      <section className="section stats">
         <Link className="stat" href="/roster">
           <b>{desk.rosterCount}</b>
           <span>On the roster</span>
@@ -184,15 +207,18 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
             <tbody>
               {roster.map((row) => (
                 <tr key={row.artist.id}>
-                  <td>
-                    <Link className="rowlink" href={`/artists/${row.artist.id}`}>
-                      {row.artist.name}
-                    </Link>
+                  <td data-label="Artist">
+                    <div className="brand-name">
+                      <Mono name={row.artist.name} image={row.artist.image_url} />
+                      <Link className="rowlink" href={`/artists/${row.artist.id}`}>
+                        {row.artist.name}
+                      </Link>
+                    </div>
                     <div className="meta">{row.artist.genre}</div>
                   </td>
-                  <td>{compact(row.artist.monthly_listeners)}</td>
-                  <td className="num">{money(row.advance)}</td>
-                  <td className="num">
+                  <td data-label="Listeners">{compact(row.artist.monthly_listeners)}</td>
+                  <td className="num" data-label="Advance">{money(row.advance)}</td>
+                  <td className="num" data-label="Balance">
                     <Balance cents={row.balance} />
                   </td>
                 </tr>

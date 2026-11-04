@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { BIGDEUCE_LOGO, portrait } from "@/lib/brand";
 import { initials, money, tone } from "@/lib/format";
 
 export function PageHeader({
@@ -35,9 +36,11 @@ export function Pill({ tone: toneName, children }: { tone?: string; children: Re
 }
 
 export function Mono({ name, image, large }: { name: string; image?: string | null; large?: boolean }) {
+  const src = portrait(name, image);
+  const logo = src === BIGDEUCE_LOGO;
   return (
-    <div className={large ? "mono lg" : "mono"} style={{ background: tone(name) }} aria-hidden>
-      {image ? <img src={image} alt="" /> : initials(name)}
+    <div className={large ? "mono lg" : "mono"} style={{ background: logo ? "#000000" : tone(name) }} aria-hidden>
+      {src ? <img src={src} alt="" className={logo ? "logo-fit" : undefined} /> : initials(name)}
     </div>
   );
 }

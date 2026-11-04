@@ -6,11 +6,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [{ source: "/finance", destination: "/catalog", permanent: false }];
   },
-  serverExternalPackages: ["node:sqlite"],
+  serverExternalPackages: ["postgres"],
   webpack: (config, { isServer }) => {
     if (isServer) {
       const current = config.externals;
-      const mark = "node:sqlite";
+      const mark = "postgres";
       if (Array.isArray(current)) {
         current.push(mark);
       } else if (current) {

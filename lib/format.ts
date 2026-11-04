@@ -44,7 +44,7 @@ export function prettyDate(value: string | null | undefined) {
   if (!value) return "—";
   const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: DESK_TIME_ZONE });
 }
 
 export function ago(value: string) {
@@ -81,8 +81,34 @@ export function term(years: number | null | undefined, options: number | null | 
   return parts.length ? parts.join(" + ") : "—";
 }
 
+const DESK_TIME_ZONE = "America/New_York";
+
 export function today() {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: DESK_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+export function clockTime(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("en-US", {
+    timeZone: DESK_TIME_ZONE,
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function addDays(day: string, days: number) {
+  const date = new Date(`${day}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const dateNumber = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${dateNumber}`;
 }
 
 export function formatIsrc(value: string | null | undefined) {

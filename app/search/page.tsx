@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Banner, PageHeader } from "@/components/ui";
+import { Banner, Mono, PageHeader } from "@/components/ui";
 import { searchDesk } from "@/lib/db";
 import { INFLUENCER_STATUSES, PLATFORMS, STAGES, labelFor } from "@/lib/labels";
 
@@ -8,7 +8,7 @@ export const metadata = { title: "Search" };
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string; error?: string }> }) {
   const { q = "", error } = await searchParams;
   const query = q.trim();
-  const hits = searchDesk(query);
+  const hits = await searchDesk(query);
   const empty = !hits.artists.length && !hits.people.length && !hits.releases.length && !hits.tracks.length && !hits.projects.length && !hits.influencers.length;
 
   return (
@@ -21,9 +21,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <section className="section stack">
           <h2>Artists</h2>
           {hits.artists.map((artist) => (
-            <Link key={artist.id} className="card" href={`/artists/${artist.id}`}>
-              <strong>{artist.name}</strong>
-              <p className="meta">{[labelFor(STAGES, artist.stage), artist.genre, artist.base_city].filter(Boolean).join(" · ")}</p>
+            <Link key={artist.id} className="card brand-name" href={`/artists/${artist.id}`}>
+              <Mono name={artist.name} image={artist.image_url} />
+              <span>
+                <strong>{artist.name}</strong>
+                <p className="meta">{[labelFor(STAGES, artist.stage), artist.genre, artist.base_city].filter(Boolean).join(" · ")}</p>
+              </span>
             </Link>
           ))}
         </section>

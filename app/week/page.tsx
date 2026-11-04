@@ -9,10 +9,10 @@ export const metadata = { title: "Week" };
 
 export default async function WeekPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const artists = listArtists();
+  const artists = await listArtists();
   const start = today();
   const days = Array.from({ length: 7 }, (_, index) => shift(start, index));
-  const planned = listLogs().filter((entry) => entry.status === "planned");
+  const planned = (await listLogs()).filter((entry) => entry.status === "planned");
   const later = planned.filter((entry) => entry.log_date > days[6] || entry.log_date < start);
 
   return (
@@ -24,7 +24,20 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
       />
       <Banner message={error} />
 
-      <section className="card stack">
+      <section className="week-strip" aria-label="This week">
+        {days.map((day) => {
+          const bits = dayBits(day);
+          const count = planned.filter((entry) => entry.log_date === day).length;
+          return (
+            <a className={day === start ? "week-tile today" : "week-tile"} href={`#day-${day}`} key={day}>
+              <b>{count}</b>
+              <span>{day === start ? "Today" : `${bits.weekday} ${bits.num}`}</span>
+            </a>
+          );
+        })}
+      </section>
+
+      <section className="card stack section">
         <h2>Plan a day</h2>
         <form action={createLog} className="form-grid">
           <input type="hidden" name="next" value="/week" />
@@ -69,7 +82,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
       {days.map((day) => {
         const entries = planned.filter((entry) => entry.log_date === day);
         return (
-          <section className="log-day" key={day}>
+          <section className="log-day" id={`day-${day}`} key={day}>
             <h2>{day === start ? "Today" : prettyDate(day)}</h2>
             {entries.length === 0 ? <p className="meta">Nothing planned.</p> : null}
             {entries.map((entry) => (
@@ -116,6 +129,14 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
       ) : null}
     </>
   );
+}
+
+function dayBits(day: string) {
+  const date = new Date(`${day}T12:00:00`);
+  return {
+    weekday: date.toLocaleDateString("en-US", { weekday: "short" }),
+    num: date.getDate(),
+  };
 }
 
 function shift(day: string, days: number) {

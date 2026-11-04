@@ -11,7 +11,7 @@ export const metadata = { title: "Influencers" };
 
 export default async function InfluencersPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const people = listInfluencers();
+  const people = await listInfluencers();
 
   return (
     <>

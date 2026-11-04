@@ -4,17 +4,17 @@ import { ConfirmSubmit } from "@/components/controls";
 import { ProjectForm } from "@/components/RecordForms";
 import { Banner, BudgetBar, PageHeader, Pill } from "@/components/ui";
 import { listArtists, listProjectViews, listReleaseViews } from "@/lib/db";
-import { money, prettyDate } from "@/lib/format";
+import { money, prettyDate, today } from "@/lib/format";
 import { PROJECT_KINDS, PROJECT_STATUSES, labelFor, statusTone } from "@/lib/labels";
 
 export const metadata = { title: "Budgets" };
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const projects = listProjectViews();
-  const artists = listArtists().map((artist) => ({ id: artist.id, name: artist.name }));
-  const releases = listReleaseViews().map((release) => ({ id: release.id, title: release.title, artist_name: release.artist_name }));
-  const today = new Date().toISOString().slice(0, 10);
+  const projects = await listProjectViews();
+  const artists = (await listArtists()).map((artist) => ({ id: artist.id, name: artist.name }));
+  const releases = (await listReleaseViews()).map((release) => ({ id: release.id, title: release.title, artist_name: release.artist_name }));
+  const todayDate = today();
 
   return (
     <>
@@ -22,7 +22,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       <Banner message={error} />
       <div className="stack">
         {projects.map((project) => {
-          const overdue = Boolean(project.due_date && project.due_date < today && (project.status === "active" || project.status === "planned"));
+          const overdue = Boolean(project.due_date && project.due_date < todayDate && (project.status === "active" || project.status === "planned"));
           return (
             <article className="card stack" key={project.id}>
               <div className="section-head">

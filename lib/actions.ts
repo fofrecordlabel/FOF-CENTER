@@ -32,18 +32,26 @@ import {
 } from "@/lib/db";
 import { today } from "@/lib/format";
 import { CAMPAIGN_STATUSES, DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, values } from "@/lib/labels";
-import { day, dollars, flag, httpUrl, oneOf, optFloat, optInt, parseDuration, percent, safePath, str } from "@/lib/parse";
+import { day, dollars, flag, httpUrl, mediaUrl, oneOf, optFloat, optInt, parseDuration, percent, safePath, str } from "@/lib/parse";
 
 function go(path: string, message?: string): never {
   revalidatePath("/", "layout");
-  if (!message) redirect(path);
-  const join = path.includes("?") ? "&" : "?";
-  redirect(`${path}${join}error=${encodeURIComponent(message)}`);
+  const [base, query = ""] = path.split("?");
+  const params = new URLSearchParams(query);
+  if (message) {
+    params.set("error", message);
+    params.delete("saved");
+  } else {
+    params.delete("error");
+    params.set("saved", "1");
+  }
+  const qs = params.toString();
+  redirect(qs ? `${base}?${qs}` : base);
 }
 
-function run(path: string, work: () => void, message = "Could not save that."): never {
+async function run(path: string, work: () => Promise<void>, message = "Could not save that."): Promise<never> {
   try {
-    work();
+    await work();
   } catch (error) {
     console.error(error);
     go(path, message);
@@ -61,8 +69,8 @@ export async function createArtist(formData: FormData) {
   const fields = artistFields(formData, name);
   let id = "";
   try {
-    id = writeRow("artists", null, { ...fields, created_at: now(), updated_at: now() });
-    logActivity(id, "File", `${name} added to the desk.`);
+    id = await writeRow("artists", null, { ...fields, created_at: now(), updated_at: now() });
+    await logActivity(id, "File", `${name} added to the desk.`);
   } catch (error) {
     console.error(error);
     go("/artists/new", "Could not add that artist.");
@@ -74,21 +82,21 @@ export async function updateArtist(formData: FormData) {
   const id = str(formData, "id", 80);
   const back = id ? `/artists/${id}/edit` : "/roster";
   const name = str(formData, "name", 160);
-  if (!id || !getArtist(id)) go("/roster", "That artist is not on file.");
+  if (!id || !(await getArtist(id))) go("/roster", "That artist is not on file.");
   if (!name) go(back, "A name is required.");
-  run(`/artists/${id}`, () => {
-    writeRow("artists", id, { ...artistFields(formData, name), updated_at: now() });
-    logActivity(id, "File", `${name} updated.`);
+  await run(`/artists/${id}`, async () => {
+    await writeRow("artists", id, { ...artistFields(formData, name), updated_at: now() });
+    await logActivity(id, "File", `${name} updated.`);
   });
 }
 
 export async function deleteArtist(formData: FormData) {
   const id = str(formData, "id", 80);
-  const artist = id ? getArtist(id) : null;
+  const artist = id ? await getArtist(id) : null;
   if (!id || !artist) go("/roster", "That artist is not on file.");
   const dest = artist.stage === "passed" || !["signed", "active", "paused", "catalog"].includes(artist.stage) ? "/pipeline" : "/roster";
   try {
-    removeArtist(id);
+    await removeArtist(id);
   } catch (error) {
     console.error(error);
     go(`/artists/${id}`, "Could not delete that artist.");
@@ -99,9 +107,9 @@ export async function deleteArtist(formData: FormData) {
 export async function setStage(formData: FormData) {
   const id = str(formData, "id", 80);
   const stage = oneOf(str(formData, "stage", 40), values(STAGES), "");
-  if (!id || !stage || !getArtist(id)) return;
+  if (!id || !stage || !(await getArtist(id))) return;
   try {
-    changeStage(id, stage);
+    await changeStage(id, stage);
   } catch (error) {
     console.error(error);
   }
@@ -110,54 +118,54 @@ export async function setStage(formData: FormData) {
 
 export async function signArtist(formData: FormData) {
   const id = str(formData, "id", 80);
-  if (!id || !getArtist(id)) go("/pipeline", "That artist is not on file.");
-  run(`/artists/${id}`, () => changeStage(id, "signed"));
+  if (!id || !(await getArtist(id))) go("/pipeline", "That artist is not on file.");
+  await run(`/artists/${id}`, async () => { await changeStage(id, "signed"); });
 }
 
 export async function passArtist(formData: FormData) {
   const id = str(formData, "id", 80);
-  if (!id || !getArtist(id)) go("/pipeline", "That artist is not on file.");
-  run(`/artists/${id}`, () => changeStage(id, "passed"));
+  if (!id || !(await getArtist(id))) go("/pipeline", "That artist is not on file.");
+  await run(`/artists/${id}`, async () => { await changeStage(id, "passed"); });
 }
 
 export async function createContract(formData: FormData) {
   const next = safePath(str(formData, "next"), "/deals");
   const artistId = str(formData, "artist_id", 80);
   const title = str(formData, "title", 180);
-  if (!artistId || !getArtist(artistId)) go(next, "Pick an artist.");
+  if (!artistId || !(await getArtist(artistId))) go(next, "Pick an artist.");
   if (!title) go(next, "A deal needs a title.");
-  run(next, () => {
-    writeRow("contracts", null, { ...contractFields(formData, artistId, title), created_at: now() });
-    touchArtist(artistId);
-    logActivity(artistId, "Deal", `${title} added.`);
+  await run(next, async () => {
+    await writeRow("contracts", null, { ...contractFields(formData, artistId, title), created_at: now() });
+    await touchArtist(artistId);
+    await logActivity(artistId, "Deal", `${title} added.`);
   });
 }
 
 export async function updateContract(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/deals");
-  const deal = id ? getContract(id) : null;
+  const deal = id ? await getContract(id) : null;
   const title = str(formData, "title", 180);
   if (!deal) go(next, "That deal is not on file.");
   if (!title) go(next, "A deal needs a title.");
   const artistId = str(formData, "artist_id", 80) ?? deal.artist_id;
-  if (!getArtist(artistId)) go(next, "Pick an artist.");
-  run(next, () => {
-    writeRow("contracts", deal.id, contractFields(formData, artistId, title));
-    touchArtist(artistId);
-    logActivity(artistId, "Deal", `${title} updated.`);
+  if (!(await getArtist(artistId))) go(next, "Pick an artist.");
+  await run(next, async () => {
+    await writeRow("contracts", deal.id, contractFields(formData, artistId, title));
+    await touchArtist(artistId);
+    await logActivity(artistId, "Deal", `${title} updated.`);
   });
 }
 
 export async function deleteContract(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/deals");
-  const deal = id ? getContract(id) : null;
+  const deal = id ? await getContract(id) : null;
   if (!deal) go(next);
-  run(next, () => {
-    destroy("contracts", deal.id);
-    touchArtist(deal.artist_id);
-    logActivity(deal.artist_id, "Deal", `${deal.title} removed.`);
+  await run(next, async () => {
+    await destroy("contracts", deal.id);
+    await touchArtist(deal.artist_id);
+    await logActivity(deal.artist_id, "Deal", `${deal.title} removed.`);
   });
 }
 
@@ -165,13 +173,13 @@ export async function createRelease(formData: FormData) {
   const next = safePath(str(formData, "next"), "/releases");
   const artistId = str(formData, "artist_id", 80);
   const title = str(formData, "title", 180);
-  if (!artistId || !getArtist(artistId)) go(next, "Pick an artist.");
+  if (!artistId || !(await getArtist(artistId))) go(next, "Pick an artist.");
   if (!title) go(next, "A release needs a title.");
   let id = "";
   try {
-    id = writeRow("releases", null, { ...releaseFields(formData, artistId, title), created_at: now() });
-    touchArtist(artistId);
-    logActivity(artistId, "Release", `${title} added.`);
+    id = await writeRow("releases", null, { ...releaseFields(formData, artistId, title), created_at: now() });
+    await touchArtist(artistId);
+    await logActivity(artistId, "Release", `${title} added.`);
   } catch (error) {
     console.error(error);
     go(next, "Could not add that release.");
@@ -183,27 +191,27 @@ export async function createRelease(formData: FormData) {
 export async function updateRelease(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), id ? `/releases/${id}` : "/releases");
-  const release = id ? getRelease(id) : null;
+  const release = id ? await getRelease(id) : null;
   const title = str(formData, "title", 180);
   if (!release) go("/releases", "That release is not on file.");
   if (!title) go(next, "A release needs a title.");
   const artistId = str(formData, "artist_id", 80) ?? release.artist_id;
-  run(next, () => {
-    writeRow("releases", release.id, releaseFields(formData, artistId, title));
-    touchArtist(artistId);
-    logActivity(artistId, "Release", `${title} updated.`);
+  await run(next, async () => {
+    await writeRow("releases", release.id, releaseFields(formData, artistId, title));
+    await touchArtist(artistId);
+    await logActivity(artistId, "Release", `${title} updated.`);
   });
 }
 
 export async function deleteRelease(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/releases");
-  const release = id ? getRelease(id) : null;
+  const release = id ? await getRelease(id) : null;
   if (!release) go(next);
   try {
-    removeRelease(release.id);
-    touchArtist(release.artist_id);
-    logActivity(release.artist_id, "Release", `${release.title} removed.`);
+    await removeRelease(release.id);
+    await touchArtist(release.artist_id);
+    await logActivity(release.artist_id, "Release", `${release.title} removed.`);
   } catch (error) {
     console.error(error);
     go(next, "Could not delete that release.");
@@ -216,44 +224,44 @@ export async function createTrack(formData: FormData) {
   const title = str(formData, "title", 180);
   if (!title) go(next, "A master needs a title.");
   const releaseId = str(formData, "release_id", 80);
-  const release = releaseId ? getRelease(releaseId) : null;
+  const release = releaseId ? await getRelease(releaseId) : null;
   if (releaseId && !release) go(next, "That release is not on file.");
   const artistId = release?.artist_id ?? str(formData, "artist_id", 80);
-  if (!artistId || !getArtist(artistId)) go(next, "Pick an artist.");
-  run(next, () => {
-    writeRow("tracks", null, { ...trackFields(formData, artistId, release?.id ?? null, title), created_at: now() });
-    touchArtist(artistId);
-    logActivity(artistId, "Master", `${title} added.`);
+  if (!artistId || !(await getArtist(artistId))) go(next, "Pick an artist.");
+  await run(next, async () => {
+    await writeRow("tracks", null, { ...trackFields(formData, artistId, release?.id ?? null, title), created_at: now() });
+    await touchArtist(artistId);
+    await logActivity(artistId, "Master", `${title} added.`);
   });
 }
 
 export async function updateTrack(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/catalog");
-  const track = id ? getTrack(id) : null;
+  const track = id ? await getTrack(id) : null;
   const title = str(formData, "title", 180);
   if (!track) go(next, "That master is not on file.");
   if (!title) go(next, "A master needs a title.");
   const releaseId = str(formData, "release_id", 80);
-  const release = releaseId ? getRelease(releaseId) : null;
+  const release = releaseId ? await getRelease(releaseId) : null;
   if (releaseId && !release) go(next, "That release is not on file.");
   const artistId = release?.artist_id ?? track.artist_id;
-  run(next, () => {
-    writeRow("tracks", track.id, trackFields(formData, artistId, release?.id ?? null, title));
-    touchArtist(artistId);
-    logActivity(artistId, "Master", `${title} updated.`);
+  await run(next, async () => {
+    await writeRow("tracks", track.id, trackFields(formData, artistId, release?.id ?? null, title));
+    await touchArtist(artistId);
+    await logActivity(artistId, "Master", `${title} updated.`);
   });
 }
 
 export async function deleteTrack(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/catalog");
-  const track = id ? getTrack(id) : null;
+  const track = id ? await getTrack(id) : null;
   if (!track) go(next);
-  run(next, () => {
-    destroy("tracks", track.id);
-    touchArtist(track.artist_id);
-    logActivity(track.artist_id, "Master", `${track.title} removed.`);
+  await run(next, async () => {
+    await destroy("tracks", track.id);
+    await touchArtist(track.artist_id);
+    await logActivity(track.artist_id, "Master", `${track.title} removed.`);
   });
 }
 
@@ -262,12 +270,12 @@ export async function createProject(formData: FormData) {
   const name = str(formData, "name", 180);
   if (!name) go(next, "A budget needs a name.");
   const artistId = str(formData, "artist_id", 80);
-  if (artistId && !getArtist(artistId)) go(next, "That artist is not on file.");
-  run(next, () => {
-    writeRow("projects", null, { ...projectFields(formData, artistId, name), created_at: now() });
+  if (artistId && !(await getArtist(artistId))) go(next, "That artist is not on file.");
+  await run(next, async () => {
+    await writeRow("projects", null, { ...projectFields(formData, artistId, name), created_at: now() });
     if (artistId) {
-      touchArtist(artistId);
-      logActivity(artistId, "Budget", `${name} opened.`);
+      await touchArtist(artistId);
+      await logActivity(artistId, "Budget", `${name} opened.`);
     }
   });
 }
@@ -275,16 +283,16 @@ export async function createProject(formData: FormData) {
 export async function updateProject(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/projects");
-  const project = id ? getProject(id) : null;
+  const project = id ? await getProject(id) : null;
   const name = str(formData, "name", 180);
   if (!project) go(next, "That budget is not on file.");
   if (!name) go(next, "A budget needs a name.");
   const artistId = str(formData, "artist_id", 80);
-  run(next, () => {
-    writeRow("projects", project.id, projectFields(formData, artistId, name));
+  await run(next, async () => {
+    await writeRow("projects", project.id, projectFields(formData, artistId, name));
     if (artistId) {
-      touchArtist(artistId);
-      logActivity(artistId, "Budget", `${name} updated.`);
+      await touchArtist(artistId);
+      await logActivity(artistId, "Budget", `${name} updated.`);
     }
   });
 }
@@ -292,11 +300,11 @@ export async function updateProject(formData: FormData) {
 export async function deleteProject(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/projects");
-  const project = id ? getProject(id) : null;
+  const project = id ? await getProject(id) : null;
   if (!project) go(next);
-  run(next, () => {
-    destroy("projects", project.id);
-    if (project.artist_id) logActivity(project.artist_id, "Budget", `${project.name} removed.`);
+  await run(next, async () => {
+    await destroy("projects", project.id);
+    if (project.artist_id) await logActivity(project.artist_id, "Budget", `${project.name} removed.`);
   });
 }
 
@@ -304,39 +312,39 @@ export async function createRoyalty(formData: FormData) {
   const next = safePath(str(formData, "next"), "/catalog");
   const artistId = str(formData, "artist_id", 80);
   const period = str(formData, "period", 40);
-  if (!artistId || !getArtist(artistId)) go(next, "Pick an artist.");
+  if (!artistId || !(await getArtist(artistId))) go(next, "Pick an artist.");
   if (!period) go(next, "A statement needs a period.");
-  run(next, () => {
-    writeRow("royalties", null, { ...royaltyFields(formData, artistId, period), created_at: now() });
-    touchArtist(artistId);
-    logActivity(artistId, "Royalties", `${period} statement logged.`);
+  await run(next, async () => {
+    await writeRow("royalties", null, { ...royaltyFields(formData, artistId, period), created_at: now() });
+    await touchArtist(artistId);
+    await logActivity(artistId, "Royalties", `${period} statement logged.`);
   });
 }
 
 export async function updateRoyalty(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/catalog");
-  const royalty = id ? getRoyalty(id) : null;
+  const royalty = id ? await getRoyalty(id) : null;
   const period = str(formData, "period", 40);
   if (!royalty) go(next, "That statement is not on file.");
   if (!period) go(next, "A statement needs a period.");
   const artistId = str(formData, "artist_id", 80) ?? royalty.artist_id;
-  run(next, () => {
-    writeRow("royalties", royalty.id, royaltyFields(formData, artistId, period));
-    touchArtist(artistId);
-    logActivity(artistId, "Royalties", `${period} statement updated.`);
+  await run(next, async () => {
+    await writeRow("royalties", royalty.id, royaltyFields(formData, artistId, period));
+    await touchArtist(artistId);
+    await logActivity(artistId, "Royalties", `${period} statement updated.`);
   });
 }
 
 export async function deleteRoyalty(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/catalog");
-  const royalty = id ? getRoyalty(id) : null;
+  const royalty = id ? await getRoyalty(id) : null;
   if (!royalty) go(next);
-  run(next, () => {
-    destroy("royalties", royalty.id);
-    touchArtist(royalty.artist_id);
-    logActivity(royalty.artist_id, "Royalties", `${royalty.period} statement removed.`);
+  await run(next, async () => {
+    await destroy("royalties", royalty.id);
+    await touchArtist(royalty.artist_id);
+    await logActivity(royalty.artist_id, "Royalties", `${royalty.period} statement removed.`);
   });
 }
 
@@ -344,12 +352,12 @@ export async function createPerson(formData: FormData) {
   const next = safePath(str(formData, "next"), "/people");
   const name = str(formData, "name", 160);
   if (!name) go(next, "A person needs a name.");
-  run(next, () => {
-    const id = writeRow("people", null, { ...personFields(formData, name), created_at: now() });
+  await run(next, async () => {
+    const id = await writeRow("people", null, { ...personFields(formData, name), created_at: now() });
     const artistId = str(formData, "artist_id", 80);
-    if (artistId && getArtist(artistId)) {
-      linkPerson(artistId, id, str(formData, "relationship", 120));
-      logActivity(artistId, "Team", `${name} added to the file.`);
+    if (artistId && await getArtist(artistId)) {
+      await linkPerson(artistId, id, str(formData, "relationship", 120));
+      await logActivity(artistId, "Team", `${name} added to the file.`);
     }
   });
 }
@@ -357,41 +365,41 @@ export async function createPerson(formData: FormData) {
 export async function updatePerson(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/people");
-  const person = id ? getPerson(id) : null;
+  const person = id ? await getPerson(id) : null;
   const name = str(formData, "name", 160);
   if (!person) go(next, "That person is not in the directory.");
   if (!name) go(next, "A person needs a name.");
-  run(next, () => {
-    writeRow("people", person.id, personFields(formData, name));
+  await run(next, async () => {
+    await writeRow("people", person.id, personFields(formData, name));
   });
 }
 
 export async function deletePerson(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/people");
-  if (!id || !getPerson(id)) go(next);
-  run(next, () => destroy("people", id));
+  if (!id || !(await getPerson(id))) go(next);
+  await run(next, async () => { await destroy("people", id); });
 }
 
 export async function attachTeam(formData: FormData) {
   const artistId = str(formData, "artist_id", 80);
   const next = safePath(str(formData, "next"), artistId ? `/artists/${artistId}` : "/people");
-  if (!artistId || !getArtist(artistId)) go("/people", "Pick an artist.");
+  if (!artistId || !(await getArtist(artistId))) go("/people", "Pick an artist.");
   const personId = str(formData, "person_id", 80);
   const name = str(formData, "name", 160);
   if (!personId && !name) go(next, "Pick someone, or enter a new name.");
-  run(next, () => {
+  await run(next, async () => {
     const relationship = str(formData, "relationship", 120);
     if (personId) {
-      if (!getPerson(personId)) throw new Error("Missing person");
-      linkPerson(artistId, personId, relationship);
-      const person = getPerson(personId);
-      logActivity(artistId, "Team", `${person?.name ?? "Someone"} linked to the file.`);
+      if (!(await getPerson(personId))) throw new Error("Missing person");
+      await linkPerson(artistId, personId, relationship);
+      const person = await getPerson(personId);
+      await logActivity(artistId, "Team", `${person?.name ?? "Someone"} linked to the file.`);
       return;
     }
-    const id = writeRow("people", null, { ...personFields(formData, name!), created_at: now() });
-    linkPerson(artistId, id, relationship);
-    logActivity(artistId, "Team", `${name} added to the file.`);
+    const id = await writeRow("people", null, { ...personFields(formData, name!), created_at: now() });
+    await linkPerson(artistId, id, relationship);
+    await logActivity(artistId, "Team", `${name} added to the file.`);
   });
 }
 
@@ -400,10 +408,10 @@ export async function detachTeam(formData: FormData) {
   const personId = str(formData, "person_id", 80);
   const next = safePath(str(formData, "next"), artistId ? `/artists/${artistId}` : "/people");
   if (!artistId || !personId) go(next);
-  const person = getPerson(personId);
-  run(next, () => {
-    unlinkPerson(artistId, personId);
-    logActivity(artistId, "Team", `${person?.name ?? "Someone"} removed from the file.`);
+  const person = await getPerson(personId);
+  await run(next, async () => {
+    await unlinkPerson(artistId, personId);
+    await logActivity(artistId, "Team", `${person?.name ?? "Someone"} removed from the file.`);
   });
 }
 
@@ -411,38 +419,38 @@ export async function createNote(formData: FormData) {
   const artistId = str(formData, "artist_id", 80);
   const next = safePath(str(formData, "next"), artistId ? `/artists/${artistId}` : "/");
   const body = str(formData, "body", 8000);
-  if (!artistId || !getArtist(artistId)) go("/", "That artist is not on file.");
+  if (!artistId || !(await getArtist(artistId))) go("/", "That artist is not on file.");
   if (!body) go(next, "Write the note first.");
-  run(next, () => {
-    writeRow("notes", null, {
+  await run(next, async () => {
+    await writeRow("notes", null, {
       artist_id: artistId,
       body,
       author: str(formData, "author", 120),
       created_at: now(),
     });
-    touchArtist(artistId);
-    logActivity(artistId, "Note", "A note was added to the file.");
+    await touchArtist(artistId);
+    await logActivity(artistId, "Note", "A note was added to the file.");
   });
 }
 
 export async function updateNote(formData: FormData) {
   const id = str(formData, "id", 80);
-  const note = id ? getNote(id) : null;
+  const note = id ? await getNote(id) : null;
   const next = safePath(str(formData, "next"), note ? `/artists/${note.artist_id}` : "/");
   const body = str(formData, "body", 8000);
   if (!note) go(next, "That note is gone.");
   if (!body) go(next, "Write the note first.");
-  run(next, () => {
-    writeRow("notes", note.id, { body, author: str(formData, "author", 120) });
+  await run(next, async () => {
+    await writeRow("notes", note.id, { body, author: str(formData, "author", 120) });
   });
 }
 
 export async function deleteNote(formData: FormData) {
   const id = str(formData, "id", 80);
-  const note = id ? getNote(id) : null;
+  const note = id ? await getNote(id) : null;
   const next = safePath(str(formData, "next"), note ? `/artists/${note.artist_id}` : "/");
   if (!note) go(next);
-  run(next, () => destroy("notes", note.id));
+  await run(next, async () => { await destroy("notes", note.id); });
 }
 
 export async function createInfluencer(formData: FormData) {
@@ -450,21 +458,21 @@ export async function createInfluencer(formData: FormData) {
   const name = str(formData, "name", 160);
   if (!name) go(next, "An influencer needs a name.");
   if (!str(formData, "handle", 120) && !str(formData, "phone", 40)) go(next, "Add an @ or a phone number.");
-  run(next, () => {
-    writeRow("influencers", null, { ...influencerFields(formData, name), created_at: now() });
+  await run(next, async () => {
+    await writeRow("influencers", null, { ...influencerFields(formData, name), created_at: now() });
   });
 }
 
 export async function updateInfluencer(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/influencers");
-  const person = id ? getInfluencer(id) : null;
+  const person = id ? await getInfluencer(id) : null;
   const name = str(formData, "name", 160);
   if (!person) go(next, "That influencer is not on the list.");
   if (!name) go(next, "An influencer needs a name.");
   if (!str(formData, "handle", 120) && !str(formData, "phone", 40)) go(next, "Add an @ or a phone number.");
-  run(next, () => {
-    writeRow("influencers", person.id, influencerFields(formData, name));
+  await run(next, async () => {
+    await writeRow("influencers", person.id, influencerFields(formData, name));
   });
 }
 
@@ -472,38 +480,38 @@ export async function createLog(formData: FormData) {
   const next = safePath(str(formData, "next"), "/log");
   const title = str(formData, "title", 180);
   if (!title) go(next, "A log entry needs a title.");
-  run(next, () => {
-    const fields = logFields(formData, title);
-    writeRow("logs", null, { ...fields, created_at: now() });
-    if (fields.artist_id && fields.status === "done") logActivity(fields.artist_id, labelForKind(fields.kind), title);
+  await run(next, async () => {
+    const fields = await logFields(formData, title);
+    await writeRow("logs", null, { ...fields, created_at: now() });
+    if (fields.artist_id && fields.status === "done") await logActivity(fields.artist_id, labelForKind(fields.kind), title);
   });
 }
 
 export async function updateLog(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/log");
-  const entry = id ? getLog(id) : null;
+  const entry = id ? await getLog(id) : null;
   const title = str(formData, "title", 180);
   if (!entry) go(next, "That log entry is not on file.");
   if (!title) go(next, "A log entry needs a title.");
-  run(next, () => {
-    writeRow("logs", entry.id, logFields(formData, title));
+  await run(next, async () => {
+    await writeRow("logs", entry.id, await logFields(formData, title));
   });
 }
 
 export async function deleteLog(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/log");
-  if (!id || !getLog(id)) go(next);
-  run(next, () => destroy("logs", id));
+  if (!id || !(await getLog(id))) go(next);
+  await run(next, async () => { await destroy("logs", id); });
 }
 
 export async function createTodo(formData: FormData) {
   const next = safePath(str(formData, "next"), "/");
   const title = str(formData, "title", 200);
   if (!title) go(next, "A to-do needs a line.");
-  run(next, () => {
-    writeRow("todos", null, {
+  await run(next, async () => {
+    await writeRow("todos", null, {
       todo_date: day(formData, "todo_date") ?? today(),
       title,
       done: 0,
@@ -515,28 +523,46 @@ export async function createTodo(formData: FormData) {
 export async function toggleTodo(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/");
-  const todo = id ? getTodo(id) : null;
+  const todo = id ? await getTodo(id) : null;
   if (!todo) go(next);
-  run(next, () => {
-    writeRow("todos", todo.id, { done: todo.done ? 0 : 1 });
+  await run(next, async () => {
+    await writeRow("todos", todo.id, {
+      done: todo.done ? 0 : 1,
+      completed_at: todo.done ? null : now(),
+    });
+  });
+}
+
+export async function updateTodo(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), "/checklist");
+  const title = str(formData, "title", 200);
+  const todo = id ? await getTodo(id) : null;
+  if (!todo) go(next, "That line is not on the checklist.");
+  if (!title) go(next, "A checklist line needs words.");
+  await run(next, async () => {
+    await writeRow("todos", todo.id, {
+      title,
+      todo_date: day(formData, "todo_date") ?? todo.todo_date,
+    });
   });
 }
 
 export async function deleteTodo(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/");
-  if (!id || !getTodo(id)) go(next);
-  run(next, () => destroy("todos", id));
+  if (!id || !(await getTodo(id))) go(next);
+  await run(next, async () => { await destroy("todos", id); });
 }
 
 export async function markLogDone(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/week");
-  const entry = id ? getLog(id) : null;
+  const entry = id ? await getLog(id) : null;
   if (!entry) go(next);
-  run(next, () => {
-    writeRow("logs", entry.id, { status: "done" });
-    if (entry.artist_id) logActivity(entry.artist_id, labelForKind(entry.kind), entry.title);
+  await run(next, async () => {
+    await writeRow("logs", entry.id, { status: "done" });
+    if (entry.artist_id) await logActivity(entry.artist_id, labelForKind(entry.kind), entry.title);
   });
 }
 
@@ -544,11 +570,11 @@ export async function createSplit(formData: FormData) {
   const next = safePath(str(formData, "next"), "/catalog");
   const trackId = str(formData, "track_id", 80);
   const name = str(formData, "name", 160);
-  const track = trackId ? getTrack(trackId) : null;
+  const track = trackId ? await getTrack(trackId) : null;
   if (!track) go(next, "That master is not on file.");
   if (!name) go(next, "A split needs a name.");
-  run(next, () => {
-    writeRow("splits", null, {
+  await run(next, async () => {
+    await writeRow("splits", null, {
       track_id: track.id,
       name,
       role: oneOf(str(formData, "role", 40), values(SPLIT_ROLES), "writer"),
@@ -557,27 +583,27 @@ export async function createSplit(formData: FormData) {
       pro: str(formData, "pro", 40),
       created_at: now(),
     });
-    logActivity(track.artist_id, "Split", `${name} on ${track.title}.`);
+    await logActivity(track.artist_id, "Split", `${name} on ${track.title}.`);
   });
 }
 
 export async function deleteSplit(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/catalog");
-  const split = id ? getSplit(id) : null;
+  const split = id ? await getSplit(id) : null;
   if (!split) go(next);
-  run(next, () => destroy("splits", split.id));
+  await run(next, async () => { await destroy("splits", split.id); });
 }
 
 export async function createCampaign(formData: FormData) {
   const next = safePath(str(formData, "next"), "/catalog");
   const releaseId = str(formData, "release_id", 80);
-  const release = releaseId ? getRelease(releaseId) : null;
+  const release = releaseId ? await getRelease(releaseId) : null;
   const name = str(formData, "name", 180);
   if (!release) go(next, "That release is not on file.");
   if (!name) go(next, "A campaign needs a name.");
-  run(next, () => {
-    writeRow("campaigns", null, {
+  await run(next, async () => {
+    await writeRow("campaigns", null, {
       release_id: release.id,
       artist_id: release.artist_id,
       name,
@@ -586,27 +612,27 @@ export async function createCampaign(formData: FormData) {
       notes: str(formData, "notes", 2000),
       created_at: now(),
     });
-    logActivity(release.artist_id, "Campaign", `${name} opened.`);
+    await logActivity(release.artist_id, "Campaign", `${name} opened.`);
   });
 }
 
 export async function deleteCampaign(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/catalog");
-  const campaign = id ? getCampaign(id) : null;
+  const campaign = id ? await getCampaign(id) : null;
   if (!campaign) go(next);
-  run(next, () => destroy("campaigns", campaign.id));
+  await run(next, async () => { await destroy("campaigns", campaign.id); });
 }
 
 export async function createBooking(formData: FormData) {
   const next = safePath(str(formData, "next"), "/catalog");
   const campaignId = str(formData, "campaign_id", 80);
   const influencerId = str(formData, "influencer_id", 80);
-  const campaign = campaignId ? getCampaign(campaignId) : null;
+  const campaign = campaignId ? await getCampaign(campaignId) : null;
   if (!campaign) go(next, "That campaign is not on file.");
-  if (!influencerId || !getInfluencer(influencerId)) go(next, "Pick an influencer.");
-  run(next, () => {
-    writeRow("campaign_bookings", null, {
+  if (!influencerId || !(await getInfluencer(influencerId))) go(next, "Pick an influencer.");
+  await run(next, async () => {
+    await writeRow("campaign_bookings", null, {
       campaign_id: campaign.id,
       influencer_id: influencerId,
       paid: str(formData, "paid", 120),
@@ -620,10 +646,10 @@ export async function createBooking(formData: FormData) {
 export async function updateBooking(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/catalog");
-  const booking = id ? getBooking(id) : null;
+  const booking = id ? await getBooking(id) : null;
   if (!booking) go(next, "That booking is not on file.");
-  run(next, () => {
-    writeRow("campaign_bookings", booking.id, {
+  await run(next, async () => {
+    await writeRow("campaign_bookings", booking.id, {
       paid: str(formData, "paid", 120),
       posted: flag(formData, "posted"),
       post_url: httpUrl(str(formData, "post_url", 400)),
@@ -634,51 +660,51 @@ export async function updateBooking(formData: FormData) {
 export async function deleteBooking(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/catalog");
-  if (!id || !getBooking(id)) go(next);
-  run(next, () => destroy("campaign_bookings", id));
+  if (!id || !(await getBooking(id))) go(next);
+  await run(next, async () => { await destroy("campaign_bookings", id); });
 }
 
 export async function createListenerLog(formData: FormData) {
   const next = safePath(str(formData, "next"), "/");
   const artistId = str(formData, "artist_id", 80);
   const listeners = optInt(formData, "listeners");
-  if (!artistId || !getArtist(artistId)) go(next, "Pick an artist.");
+  if (!artistId || !(await getArtist(artistId))) go(next, "Pick an artist.");
   if (listeners == null) go(next, "Enter the monthly listeners.");
-  const artist = getArtist(artistId);
-  run(next, () => {
-    writeRow("listener_logs", null, {
+  const artist = await getArtist(artistId);
+  await run(next, async () => {
+    await writeRow("listener_logs", null, {
       artist_id: artistId,
       log_date: day(formData, "log_date") ?? today(),
       listeners,
       note: str(formData, "note", 400),
       created_at: now(),
     });
-    syncListeners(artistId);
-    logActivity(artistId, "Listeners", `${artist?.name ?? "Artist"} at ${listeners.toLocaleString("en-US")} monthly.`);
+    await syncListeners(artistId);
+    await logActivity(artistId, "Listeners", `${artist?.name ?? "Artist"} at ${listeners.toLocaleString("en-US")} monthly.`);
   });
 }
 
 export async function deleteListenerLog(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/");
-  const entry = id ? getListenerLog(id) : null;
+  const entry = id ? await getListenerLog(id) : null;
   if (!entry) go(next);
-  run(next, () => {
-    destroy("listener_logs", entry.id);
-    syncListeners(entry.artist_id);
+  await run(next, async () => {
+    await destroy("listener_logs", entry.id);
+    await syncListeners(entry.artist_id);
   });
 }
 
 export async function deleteInfluencer(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/influencers");
-  if (!id || !getInfluencer(id)) go(next);
-  run(next, () => destroy("influencers", id));
+  if (!id || !(await getInfluencer(id))) go(next);
+  await run(next, async () => { await destroy("influencers", id); });
 }
 
 export async function clearSampleDesk() {
   try {
-    clearSample();
+    await clearSample();
   } catch (error) {
     console.error(error);
     go("/", "Could not clear the sample desk.");
@@ -707,7 +733,7 @@ function artistFields(formData: FormData, name: string) {
     monthly_listeners: optInt(formData, "monthly_listeners"),
     ig_followers: optInt(formData, "ig_followers"),
     tiktok_followers: optInt(formData, "tiktok_followers"),
-    image_url: httpUrl(str(formData, "image_url", 400)),
+    image_url: mediaUrl(str(formData, "image_url", 400)),
     source: str(formData, "source", 180),
     ar_rep: str(formData, "ar_rep", 120),
     ipi: cleanIpi(str(formData, "ipi", 20)),
@@ -748,7 +774,7 @@ function releaseFields(formData: FormData, artistId: string, title: string) {
     catalog_no: str(formData, "catalog_no", 40),
     imprint: str(formData, "imprint", 120) ?? "FOF Records",
     distributor: str(formData, "distributor", 120),
-    cover_url: httpUrl(str(formData, "cover_url", 400)),
+    cover_url: mediaUrl(str(formData, "cover_url", 400)),
     budget_cents: dollars(formData, "budget"),
     notes: str(formData, "notes", 4000),
   };
@@ -830,7 +856,7 @@ function influencerFields(formData: FormData, name: string) {
   };
 }
 
-function logFields(formData: FormData, title: string) {
+async function logFields(formData: FormData, title: string) {
   const artistId = str(formData, "artist_id", 80);
   return {
     log_date: day(formData, "log_date") ?? today(),
@@ -839,7 +865,7 @@ function logFields(formData: FormData, title: string) {
     body: str(formData, "body", 8000),
     link: httpUrl(str(formData, "link", 400)),
     platform: str(formData, "platform", 80),
-    artist_id: artistId && getArtist(artistId) ? artistId : null,
+    artist_id: artistId && await getArtist(artistId) ? artistId : null,
     status: oneOf(str(formData, "status", 20), ["planned", "done"], "done"),
   };
 }

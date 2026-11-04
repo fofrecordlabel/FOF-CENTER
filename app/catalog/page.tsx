@@ -3,7 +3,7 @@ import { deleteRoyalty, deleteTrack } from "@/lib/actions";
 import { ConfirmSubmit } from "@/components/controls";
 import { CampaignBlock, DeliveryChecks, SplitList } from "@/components/ReleaseOps";
 import { RoyaltyForm, TrackForm } from "@/components/RecordForms";
-import { Balance, Banner, PageHeader, Pill } from "@/components/ui";
+import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
 import { listArtists, listBookings, listCampaigns, listInfluencers, listReleaseViews, listRoyaltyViews, listSplits, listTrackViews, rosterRows } from "@/lib/db";
 import { duration, formatIsrc, initials, money, prettyDate } from "@/lib/format";
 import { RELEASE_STATUSES, RELEASE_TYPES, ROYALTY_SOURCES, labelFor, statusTone } from "@/lib/labels";
@@ -12,18 +12,18 @@ export const metadata = { title: "Catalog" };
 
 export default async function CatalogPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const releases = listReleaseViews();
-  const tracks = listTrackViews();
-  const royalties = listRoyaltyViews();
-  const artists = listArtists().map((artist) => ({ id: artist.id, name: artist.name }));
+  const releases = await listReleaseViews();
+  const tracks = await listTrackViews();
+  const royalties = await listRoyaltyViews();
+  const artists = (await listArtists()).map((artist) => ({ id: artist.id, name: artist.name }));
   const releaseOptions = releases.map((release) => ({ id: release.id, title: release.title, artist_name: release.artist_name }));
-  const roster = rosterRows();
+  const roster = await rosterRows();
   const looseTracks = tracks.filter((track) => !track.release_id);
   const looseRoyalties = royalties.filter((line) => !line.release_id);
-  const splits = listSplits();
-  const campaigns = listCampaigns();
-  const bookings = listBookings();
-  const influencers = listInfluencers();
+  const splits = await listSplits();
+  const campaigns = await listCampaigns();
+  const bookings = await listBookings();
+  const influencers = await listInfluencers();
 
   return (
     <>
@@ -45,6 +45,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         <section className="stats catalog-money">
           {roster.map((row) => (
             <Link className="stat" href={`/artists/${row.artist.id}`} key={row.artist.id}>
+              <Mono name={row.artist.name} image={row.artist.image_url} />
               <b>{row.artist.name}</b>
               <span>
                 Gross {money(row.gross)} · <Balance cents={row.balance} />

@@ -10,7 +10,7 @@ import { RELEASE_STATUSES, RELEASE_TYPES, labelFor, statusTone } from "@/lib/lab
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const release = getRelease(id);
+  const release = await getRelease(id);
   return { title: release?.title ?? "Release" };
 }
 
@@ -23,9 +23,9 @@ export default async function ReleasePage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
-  const release = getRelease(id);
+  const release = await getRelease(id);
   if (!release) notFound();
-  const tracks = listTracksForRelease(id);
+  const tracks = await listTracksForRelease(id);
   const next = `/releases/${id}`;
 
   return (

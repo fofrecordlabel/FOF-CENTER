@@ -416,7 +416,7 @@ export function PersonForm({ person, artistId, next }: { person?: Person | null;
         <input name="email" type="email" defaultValue={person?.email ?? ""} />
       </Field>
       <Field label="Phone">
-        <input name="phone" defaultValue={person?.phone ?? ""} />
+        <input name="phone" inputMode="tel" autoComplete="tel" defaultValue={person?.phone ?? ""} />
       </Field>
       <Field label="IPI" hint="9 to 11 digits, if this person writes or publishes.">
         <input name="ipi" inputMode="numeric" defaultValue={person?.ipi ?? ""} />
@@ -471,7 +471,7 @@ export function TeamForm({
         <input name="email" type="email" />
       </Field>
       <Field label="Phone">
-        <input name="phone" />
+        <input name="phone" inputMode="tel" autoComplete="tel" />
       </Field>
       <div className="actions wide">
         <SubmitButton label="Add to the file" />
@@ -509,7 +509,7 @@ export function InfluencerForm({ person, next }: { person?: Influencer | null; n
         <input name="handle" defaultValue={person?.handle ?? ""} placeholder="@handle" />
       </Field>
       <Field label="Number">
-        <input name="phone" defaultValue={person?.phone ?? ""} placeholder="Phone number" />
+        <input name="phone" inputMode="tel" autoComplete="tel" defaultValue={person?.phone ?? ""} placeholder="Phone number" />
       </Field>
       <Field label="Platform">
         <Choices name="platform" list={PLATFORMS} value={person?.platform ?? "instagram"} />

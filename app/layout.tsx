@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Newsreader, Outfit } from "next/font/google";
 import { connection } from "next/server";
 import { Shell } from "@/components/Shell";
@@ -21,6 +21,13 @@ export const metadata: Metadata = {
   title: { default: "Desk · FOF Records", template: "%s · FOF Records" },
   description: "FOF Records label desk. A&R pipeline, roster, deals, masters, budgets, and royalties.",
   robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#000000",
 };
 
 export const dynamic = "force-dynamic";

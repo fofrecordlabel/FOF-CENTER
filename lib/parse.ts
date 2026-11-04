@@ -57,6 +57,12 @@ export function httpUrl(value: string | null) {
   return null;
 }
 
+export function mediaUrl(value: string | null) {
+  if (!value) return null;
+  if (value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") && !value.includes("..")) return value.slice(0, 400);
+  return httpUrl(value);
+}
+
 export function day(form: FormData, key: string) {
   const value = str(form, key, 20);
   if (!value) return null;

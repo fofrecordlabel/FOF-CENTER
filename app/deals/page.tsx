@@ -9,8 +9,8 @@ export const metadata = { title: "Business Affairs" };
 
 export default async function DealsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const deals = listContractViews();
-  const artists = listArtists().map((artist) => ({ id: artist.id, name: artist.name }));
+  const deals = await listContractViews();
+  const artists = (await listArtists()).map((artist) => ({ id: artist.id, name: artist.name }));
 
   return (
     <>
@@ -31,18 +31,18 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
           <tbody>
             {deals.map((deal) => (
               <tr key={deal.id}>
-                <td>
+                <td data-label="Deal">
                   <Link className="rowlink" href={`/artists/${deal.artist_id}#deals`}>{deal.title}</Link>
                   <div className="meta">{labelFor(DEAL_TYPES, deal.deal_type)} · {deal.territory || "—"}</div>
                 </td>
-                <td><Link className="rowlink" href={`/artists/${deal.artist_id}`}>{deal.artist_name}</Link></td>
-                <td><Pill tone={statusTone(deal.status)}>{labelFor(DEAL_STATUSES, deal.status)}</Pill></td>
-                <td>
+                <td data-label="Artist"><Link className="rowlink" href={`/artists/${deal.artist_id}`}>{deal.artist_name}</Link></td>
+                <td data-label="Status"><Pill tone={statusTone(deal.status)}>{labelFor(DEAL_STATUSES, deal.status)}</Pill></td>
+                <td data-label="Term">
                   {term(deal.term_years, deal.options)}
                   <div className="meta">{deal.effective_date ? prettyDate(deal.effective_date) : "Undated"}</div>
                 </td>
-                <td className="num">{rate(deal.royalty_rate)}</td>
-                <td className="num">{money(deal.advance_cents)}</td>
+                <td className="num" data-label="Rate">{rate(deal.royalty_rate)}</td>
+                <td className="num" data-label="Advance">{money(deal.advance_cents)}</td>
               </tr>
             ))}
           </tbody>

@@ -1,6 +1,8 @@
-import { createLog, createTodo, deleteTodo, markLogDone, toggleTodo } from "@/lib/actions";
+import Link from "next/link";
+import { createLog, createTodo, markLogDone } from "@/lib/actions";
+import { ChecklistLine } from "@/components/Checklist";
 import { PostAlert } from "@/components/PostAlert";
-import { ConfirmSubmit, SubmitButton } from "@/components/controls";
+import { SubmitButton } from "@/components/controls";
 import { Field } from "@/components/ui";
 import { prettyDate, today } from "@/lib/format";
 import { LOG_KINDS, labelFor } from "@/lib/labels";
@@ -60,59 +62,32 @@ export function DailyTodos({ todos }: { todos: Todo[] }) {
   const day = today();
   const open = todos.filter((todo) => todo.done === 0);
   const done = todos.filter((todo) => todo.done === 1 && todo.todo_date === day);
+  const lines = [...open, ...done];
   return (
     <section className="card stack">
       <div className="section-head">
         <div>
           <p className="kicker">Today</p>
-          <h2>To-do</h2>
+          <h2>Checklist</h2>
         </div>
-        <span className="meta">{open.length} open</span>
+        <Link href="/checklist" className="meta">
+          All days
+        </Link>
       </div>
-      <form action={createTodo} className="form-grid">
+      {lines.length === 0 ? <p className="meta">The list is clear.</p> : null}
+      {lines.map((todo) => (
+        <ChecklistLine key={todo.id} todo={todo} next="/" />
+      ))}
+      <form action={createTodo} className="form-grid compact-form">
         <input type="hidden" name="next" value="/" />
         <input type="hidden" name="todo_date" value={day} />
         <Field label="Add a line" wide>
-          <input name="title" required placeholder="Send the cover, call the plug, book the post" />
+          <input name="title" required placeholder="Send the cover, call the plug, book the post" enterKeyHint="done" />
         </Field>
         <div className="actions wide">
           <SubmitButton label="Add to today" />
         </div>
       </form>
-      {open.length === 0 && done.length === 0 ? <p className="meta">The list is clear.</p> : null}
-      {open.map((todo) => (
-        <div className="master-line" key={todo.id}>
-          <div>
-            <strong>{todo.title}</strong>
-            {todo.todo_date < day ? <p className="meta">From {prettyDate(todo.todo_date)}</p> : null}
-          </div>
-          <div className="actions">
-            <form action={toggleTodo}>
-              <input type="hidden" name="id" value={todo.id} />
-              <input type="hidden" name="next" value="/" />
-              <SubmitButton label="Done" className="btn primary small" />
-            </form>
-            <form action={deleteTodo}>
-              <input type="hidden" name="id" value={todo.id} />
-              <input type="hidden" name="next" value="/" />
-              <ConfirmSubmit className="btn danger small" label="Remove" message={`Remove “${todo.title}” from today?`} />
-            </form>
-          </div>
-        </div>
-      ))}
-      {done.map((todo) => (
-        <div className="master-line done-line" key={todo.id}>
-          <div>
-            <strong>{todo.title}</strong>
-            <p className="meta">Done</p>
-          </div>
-          <form action={toggleTodo}>
-            <input type="hidden" name="id" value={todo.id} />
-            <input type="hidden" name="next" value="/" />
-            <SubmitButton label="Reopen" className="btn small" />
-          </form>
-        </div>
-      ))}
     </section>
   );
 }

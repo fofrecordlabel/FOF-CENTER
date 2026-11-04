@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createArtist, deleteArtist, updateArtist } from "@/lib/actions";
+import { isBigDeuce } from "@/lib/brand";
 import { PRIORITIES, STAGES } from "@/lib/labels";
 import type { Artist } from "@/lib/types";
 import { ConfirmSubmit, SubmitButton } from "./controls";
@@ -67,7 +68,7 @@ export function ArtistForm({ artist }: { artist?: Artist | null }) {
             <Field label="Hometown">
               <input name="hometown" defaultValue={artist?.hometown ?? ""} />
             </Field>
-            <Field label="Photo URL" hint="Paste a link. The desk stores the link, not the file.">
+            <Field label="Photo URL" hint={artist && isBigDeuce(artist.name) ? "Leave this blank and the BIGDEUCEFOF logo stays on the profile." : "Paste a link. The desk stores the link, not the file."}>
               <input name="image_url" defaultValue={artist?.image_url ?? ""} placeholder="https://" />
             </Field>
             <Field label="Short bio" wide>
@@ -107,7 +108,7 @@ export function ArtistForm({ artist }: { artist?: Artist | null }) {
               <input name="email" type="email" defaultValue={artist?.email ?? ""} />
             </Field>
             <Field label="Phone">
-              <input name="phone" defaultValue={artist?.phone ?? ""} />
+              <input name="phone" inputMode="tel" autoComplete="tel" defaultValue={artist?.phone ?? ""} />
             </Field>
           </div>
         </section>

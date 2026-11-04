@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { StageSelect } from "@/components/controls";
-import { PageHeader, Pill } from "@/components/ui";
+import { Mono, PageHeader, Pill } from "@/components/ui";
 import { artistsIn } from "@/lib/db";
 import { compact } from "@/lib/format";
 import { PIPELINE_STAGES, STAGES, labelFor, priorityTone } from "@/lib/labels";
 
 export const metadata = { title: "A&R Pipeline" };
 
-export default function PipelinePage() {
-  const passed = artistsIn(["passed"]);
+export default async function PipelinePage() {
+  const columns = await Promise.all(
+    PIPELINE_STAGES.map(async (stage) => ({ stage, people: await artistsIn([stage.value]) }))
+  );
+  const passed = await artistsIn(["passed"]);
 
   return (
     <>
@@ -22,8 +25,7 @@ export default function PipelinePage() {
         </Link>
       </PageHeader>
       <div className="board">
-        {PIPELINE_STAGES.map((stage) => {
-          const people = artistsIn([stage.value]);
+        {columns.map(({ stage, people }) => {
           return (
             <section className="col" key={stage.value}>
               <header>
@@ -37,7 +39,8 @@ export default function PipelinePage() {
                     <Pill tone={priorityTone(artist.priority)}>{artist.priority}</Pill>
                     <span className="meta">{compact(artist.monthly_listeners)} listeners</span>
                   </div>
-                  <Link className="title" href={`/artists/${artist.id}`}>
+                  <Link className="title brand-name" href={`/artists/${artist.id}`}>
+                    <Mono name={artist.name} image={artist.image_url} />
                     {artist.name}
                   </Link>
                   <p className="meta">
@@ -62,9 +65,12 @@ export default function PipelinePage() {
             <article className="card" key={artist.id}>
               <div className="section-head">
                 <div>
-                  <Link className="rowlink" href={`/artists/${artist.id}`}>
-                    {artist.name}
-                  </Link>
+                  <div className="brand-name">
+                    <Mono name={artist.name} image={artist.image_url} />
+                    <Link className="rowlink" href={`/artists/${artist.id}`}>
+                      {artist.name}
+                    </Link>
+                  </div>
                   <p className="meta">{[artist.genre, artist.base_city].filter(Boolean).join(" · ")}</p>
                 </div>
                 <Pill tone="mute">{labelFor(STAGES, artist.stage)}</Pill>

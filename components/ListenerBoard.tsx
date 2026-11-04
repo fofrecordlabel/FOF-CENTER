@@ -1,11 +1,12 @@
 import { createListenerLog, deleteListenerLog } from "@/lib/actions";
 import { ConfirmSubmit, SubmitButton } from "@/components/controls";
+import { ListenerChart, type ChartMark } from "@/components/ListenerChart";
 import { Field } from "@/components/ui";
+import { BIGDEUCE_LOGO, isBigDeuce } from "@/lib/brand";
 import { count, prettyDate, today } from "@/lib/format";
-import { LOG_KINDS, labelFor } from "@/lib/labels";
 import type { ListenerLog } from "@/lib/types";
 
-export type ChartMark = { id: string; log_date: string; kind: string; title: string };
+export type { ChartMark };
 
 const GOAL = 100_000;
 
@@ -31,9 +32,12 @@ export function ListenerBoard({
   return (
     <section className="card listener">
       <div className="section-head">
-        <div>
-          <p className="kicker">Monthly listeners</p>
-          <h2>{artist.name}</h2>
+        <div className="listener-brand">
+          {isBigDeuce(artist.name) ? <img className="artist-logo" src={BIGDEUCE_LOGO} alt="" /> : null}
+          <div>
+            <p className="kicker">Monthly listeners</p>
+            <h2>{artist.name}</h2>
+          </div>
         </div>
         {move ? <p className={`delta ${move.kind}`}>{move.text}</p> : <p className="delta">No change yet</p>}
       </div>
@@ -53,6 +57,18 @@ export function ListenerBoard({
         </div>
       </div>
 
+      <ListenerChart
+        logs={logs.map((log) => ({
+          id: log.id,
+          artist_id: log.artist_id,
+          log_date: log.log_date,
+          listeners: log.listeners,
+          note: log.note,
+          created_at: log.created_at,
+        }))}
+        marks={marks.map((mark) => ({ id: mark.id, log_date: mark.log_date, kind: mark.kind, title: mark.title }))}
+      />
+
       <form action={createListenerLog} className="form-grid">
         <input type="hidden" name="artist_id" value={artist.id} />
         <input type="hidden" name="next" value={next} />
@@ -69,17 +85,6 @@ export function ListenerBoard({
           <SubmitButton label="Log listeners" />
         </div>
       </form>
-
-      <ListenerChart logs={logs} marks={marks} />
-      {marks.length ? (
-        <div className="mark-list">
-          {marks.map((mark) => (
-            <p className="meta" key={mark.id}>
-              {labelFor(LOG_KINDS, mark.kind)} · {prettyDate(mark.log_date)} · {mark.title}
-            </p>
-          ))}
-        </div>
-      ) : null}
 
       {logs.length ? (
         <div>
@@ -120,65 +125,3 @@ function deltaLabel(delta: number | null) {
   return { kind: "flat", text: "Flat" };
 }
 
-function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: ChartMark[] }) {
-  if (logs.length === 0 && marks.length === 0) return null;
-  const w = 640;
-  const h = 220;
-  const padL = 16;
-  const padR = 16;
-  const padT = 28;
-  const padB = 28;
-  const stamp = (date: string) => new Date(`${date}T12:00:00`).getTime();
-  const times = [...logs.map((log) => stamp(log.log_date)), ...marks.map((mark) => stamp(mark.log_date))];
-  const minT = Math.min(...times);
-  const maxT = Math.max(...times);
-  const xOf = (date: string) => (maxT === minT ? w / 2 : padL + ((stamp(date) - minT) / (maxT - minT)) * (w - padL - padR));
-  const values = logs.map((log) => log.listeners);
-  const lo = values.length ? Math.min(...values) : 0;
-  const hi = values.length ? Math.max(...values) : 1;
-  const y = (n: number) => {
-    if (!values.length || hi === lo) return (padT + (h - padB)) / 2;
-    return padT + (1 - (n - lo) / (hi - lo)) * (h - padT - padB);
-  };
-  const d = logs.map((log, i) => `${i === 0 ? "M" : "L"}${xOf(log.log_date).toFixed(1)} ${y(log.listeners).toFixed(1)}`).join(" ");
-  const first = logs[0] ?? marks[0];
-  const last = logs[logs.length - 1] ?? marks[marks.length - 1];
-
-  return (
-    <svg className="chart" viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Listener logs with posts, promo, and playlist adds">
-      {logs.length > 1 ? <path d={d} fill="none" stroke="#ffffff" strokeWidth="1.5" /> : null}
-      {logs.map((log) => (
-        <circle key={log.id} cx={xOf(log.log_date)} cy={y(log.listeners)} r="3.5" fill="#ffffff" />
-      ))}
-      {marks.map((mark, index) => {
-        const slot = marks.slice(0, index).filter((item) => item.log_date === mark.log_date).length;
-        const x = xOf(mark.log_date) + slot * 12;
-        return (
-          <g key={mark.id}>
-            <line x1={x} y1={12} x2={x} y2={24} stroke="#ffffff" strokeWidth="1" />
-            <text x={x} y={10} fill="#ffffff" fontSize="10" textAnchor="middle">
-              {markLetter(mark.kind)}
-            </text>
-          </g>
-        );
-      })}
-      {first ? (
-        <text x={xOf(first.log_date)} y={h - 8} fill="#737373" fontSize="11" textAnchor={logs.length + marks.length === 1 ? "middle" : "start"}>
-          {prettyDate(first.log_date)}
-        </text>
-      ) : null}
-      {last && last !== first ? (
-        <text x={xOf(last.log_date)} y={h - 8} fill="#737373" fontSize="11" textAnchor="end">
-          {prettyDate(last.log_date)}
-        </text>
-      ) : null}
-    </svg>
-  );
-}
-
-function markLetter(kind: string) {
-  if (kind === "promo") return "R";
-  if (kind === "blog") return "B";
-  if (kind === "playlist") return "L";
-  return "P";
-}

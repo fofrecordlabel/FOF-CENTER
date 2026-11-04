@@ -5,7 +5,7 @@ import { getDossier, listListenerLogs, listLogs } from "@/lib/db";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const file = getDossier(id);
+  const file = await getDossier(id);
   return { title: file?.artist.name ?? "Artist" };
 }
 
@@ -18,18 +18,16 @@ export default async function ArtistPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
-  const file = getDossier(id);
+  const file = await getDossier(id);
   if (!file) notFound();
+  const listeners = await listListenerLogs(id);
+  const marks = (await listLogs())
+    .filter((entry) => entry.artist_id === id && entry.status !== "planned")
+    .map((entry) => ({ id: entry.id, log_date: entry.log_date, kind: entry.kind, title: entry.title }));
   return (
     <>
       <Banner message={error} />
-      <DossierView
-        file={file}
-        listeners={listListenerLogs(id)}
-        marks={listLogs()
-          .filter((entry) => entry.artist_id === id && entry.status !== "planned")
-          .map((entry) => ({ id: entry.id, log_date: entry.log_date, kind: entry.kind, title: entry.title }))}
-      />
+      <DossierView file={file} listeners={listeners} marks={marks} />
     </>
   );
 }

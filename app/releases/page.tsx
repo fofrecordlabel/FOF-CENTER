@@ -10,8 +10,8 @@ export const metadata = { title: "Releases" };
 export default async function ReleasesPage({ searchParams }: { searchParams: Promise<{ status?: string; error?: string }> }) {
   const { status, error } = await searchParams;
   const current = RELEASE_STATUSES.some((item) => item.value === status) ? status : "all";
-  const releases = listReleaseViews().filter((release) => current === "all" || release.status === current);
-  const artists = listArtists().map((artist) => ({ id: artist.id, name: artist.name }));
+  const releases = (await listReleaseViews()).filter((release) => current === "all" || release.status === current);
+  const artists = (await listArtists()).map((artist) => ({ id: artist.id, name: artist.name }));
 
   return (
     <>
@@ -39,14 +39,14 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
           <tbody>
             {releases.map((release) => (
               <tr key={release.id}>
-                <td>
+                <td data-label="Release">
                   <Link className="rowlink" href={`/releases/${release.id}`}>{release.title}</Link>
                   <div className="meta">{[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no].filter(Boolean).join(" · ")}</div>
                 </td>
-                <td><Link className="rowlink" href={`/artists/${release.artist_id}`}>{release.artist_name}</Link></td>
-                <td><Pill tone={statusTone(release.status)}>{labelFor(RELEASE_STATUSES, release.status)}</Pill></td>
-                <td>{prettyDate(release.release_date)}</td>
-                <td className="num">{money(release.budget_cents)}</td>
+                <td data-label="Artist"><Link className="rowlink" href={`/artists/${release.artist_id}`}>{release.artist_name}</Link></td>
+                <td data-label="Status"><Pill tone={statusTone(release.status)}>{labelFor(RELEASE_STATUSES, release.status)}</Pill></td>
+                <td data-label="Date">{prettyDate(release.release_date)}</td>
+                <td className="num" data-label="Budget">{money(release.budget_cents)}</td>
               </tr>
             ))}
           </tbody>

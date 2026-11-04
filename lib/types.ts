@@ -213,6 +213,7 @@ export type Todo = {
   title: string;
   done: number;
   created_at: string;
+  completed_at: string | null;
 };
 
 export type CampaignBooking = {

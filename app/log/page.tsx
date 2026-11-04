@@ -20,8 +20,8 @@ const FILTERS = [
 export default async function LogPage({ searchParams }: { searchParams: Promise<{ error?: string; kind?: string }> }) {
   const { error, kind } = await searchParams;
   const active = FILTERS.some((item) => item.value === kind) ? kind : "";
-  const artists = listArtists();
-  const logs = listLogs().filter((entry) => entry.status !== "planned" && (active ? entry.kind === active : true));
+  const artists = await listArtists();
+  const logs = (await listLogs()).filter((entry) => entry.status !== "planned" && (active ? entry.kind === active : true));
   const groups = groupByDate(logs);
   const day = today();
 
