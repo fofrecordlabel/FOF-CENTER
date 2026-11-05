@@ -51,11 +51,8 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
     <div className={menu ? "shell menu-open" : "shell"}>
       <aside className="rail">
         <Link className="brand" href="/">
-          <span className="mark">FOF</span>
-          <span>
-            <strong>FOF Records</strong>
-            <em>Label desk</em>
-          </span>
+          <img className="brand-logo" src="/brand/fof.png" alt="FOF Records" />
+          <em>Label desk</em>
         </Link>
         <nav className="nav">
           {NAV.map((item) => (
@@ -84,8 +81,8 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
               <span />
               <span />
             </button>
-            <Link className="mobile-brand" href="/" aria-label="Desk">
-              <span className="mark">FOF</span>
+            <Link className="mobile-brand" href="/" aria-label="FOF Records">
+              <img className="brand-logo" src="/brand/fof.png" alt="" />
             </Link>
             <p className="kicker desk-kicker">FOF Records · Internal</p>
             <form className="search" action="/search" method="get">

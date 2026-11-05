@@ -58,7 +58,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
       {releases.length === 0 ? (
         <section className="sheet">
           <div className="cover-frame">
-            <span className="cover-fallback">FOF</span>
+            <img className="cover-logo" src="/brand/fof.png" alt="FOF Records" />
           </div>
           <div className="sheet-copy">
             <p className="kicker">The wall</p>

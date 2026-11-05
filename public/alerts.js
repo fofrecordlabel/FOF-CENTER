@@ -4,7 +4,7 @@ self.addEventListener("message", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.detail,
-      icon: "/brand/bigdeucefof.png",
+      icon: "/brand/fof.png",
       data: { href: data.href || "/" },
     })
   );

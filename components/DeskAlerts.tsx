@@ -57,7 +57,7 @@ async function pushAlerts(alerts: DeskAlert[], day: string) {
     try {
       await registration.showNotification(alert.title, {
         body: alert.detail,
-        icon: "/brand/bigdeucefof.png",
+        icon: "/brand/fof.png",
         data: { href: alert.href },
       });
     } catch {

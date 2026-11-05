@@ -8,7 +8,7 @@ export default async function LockPage({ searchParams }: { searchParams: Promise
   return (
     <main className="lock-screen">
       <form action={unlockDesk} className="lock-card stack">
-        <p className="kicker">FOF Records</p>
+        <img className="brand-logo lock-logo" src="/brand/fof.png" alt="FOF Records" />
         <h1>Desk code</h1>
         <p className="meta">Enter the code to open the desk.</p>
         {error ? <p className="banner">That code is wrong.</p> : null}

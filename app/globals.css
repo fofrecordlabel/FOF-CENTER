@@ -56,13 +56,8 @@ a { color: var(--acid); }
   background: var(--rail);
   border-right: 1px solid var(--line);
 }
-.brand { display: flex; gap: 10px; align-items: center; padding: 0 8px; color: inherit; text-decoration: none; }
-.mark {
-  width: 38px; height: 38px; display: grid; place-items: center;
-  background: #ffffff; color: #000000; border-radius: 2px;
-  font-weight: 700; letter-spacing: -0.06em; font-size: 12px;
-}
-.brand strong { display: block; font-size: 14px; }
+.brand { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 0 8px; color: inherit; text-decoration: none; }
+.brand-logo { height: 84px; width: auto; display: block; }
 .brand em { display: block; font-style: normal; color: var(--faint); font-size: 12px; }
 .nav { display: flex; flex-direction: column; gap: 2px; }
 .nav a {
@@ -270,6 +265,7 @@ details.drawer[open] summary { margin-bottom: 12px; }
   overflow: hidden;
 }
 .cover-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover-frame img.cover-logo { width: 78%; height: 78%; object-fit: contain; }
 .cover-fallback {
   font-family: var(--font-newsreader), Georgia, serif;
   font-style: italic;
@@ -404,6 +400,7 @@ details.drawer[open] summary { margin-bottom: 12px; }
 .alert-card span { color: var(--muted); font-size: 14px; }
 .lock-screen { min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
 .lock-card { width: min(420px, 100%); }
+.lock-logo { height: 140px; margin: 0 auto 8px; }
 .lock-card h1 {
   margin: 0; font-family: var(--font-newsreader), Georgia, serif;
   font-style: italic; font-weight: 450; font-size: 48px; letter-spacing: -0.04em;
@@ -504,6 +501,7 @@ a.glance-card:hover { border-color: #ffffff; }
   .rail { display: none; }
   .menu-button { display: inline-flex; }
   .mobile-brand { display: grid; }
+  .mobile-brand .brand-logo { height: 40px; }
   .desk-kicker { display: none; }
   .topbar {
     display: grid;
