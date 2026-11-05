@@ -120,8 +120,8 @@ export function ListenerBoard({
 
 function deltaLabel(delta: number | null) {
   if (delta == null) return null;
-  if (delta > 0) return { kind: "gain", text: `Gain ${count(delta)}` };
-  if (delta < 0) return { kind: "drop", text: `Drop ${count(Math.abs(delta))}` };
+  if (delta > 0) return { kind: "gain", text: `Spike +${count(delta)}` };
+  if (delta < 0) return { kind: "drop", text: `Drop −${count(Math.abs(delta))}` };
   return { kind: "flat", text: "Flat" };
 }
 

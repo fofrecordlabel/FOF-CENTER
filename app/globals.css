@@ -358,7 +358,27 @@ details.drawer[open] summary { margin-bottom: 12px; }
 .goal-top { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
 .goal-bar { height: 8px; background: #222222; }
 .goal-bar span { display: block; height: 100%; background: #ffffff; }
-.chart-wrap { display: grid; gap: 8px; }
+.chart-wrap { display: grid; gap: 10px; }
+.chart-moves { display: flex; flex-wrap: wrap; gap: 8px; }
+.chart-moves span {
+  display: grid;
+  gap: 2px;
+  min-width: 140px;
+  border: 1px solid var(--line);
+  background: #000000;
+  padding: 10px 12px;
+}
+.chart-moves b {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-style: italic;
+  font-weight: 450;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+.chart-moves em { font-style: normal; color: var(--muted); font-size: 12px; }
+.chart-moves .drop b { color: #a3a3a3; }
+.chart-note { margin: 0; color: var(--faint); font-size: 12px; }
 .chart-readout { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; }
 .chart-readout b {
   display: block;
