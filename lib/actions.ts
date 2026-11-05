@@ -20,8 +20,10 @@ import {
   getRelease,
   getRoyalty,
   getSplit,
+  getTemplate,
   getTodo,
   getTrack,
+  listTemplates,
   linkPerson,
   logActivity,
   removeArtist,
@@ -31,6 +33,7 @@ import {
   unlinkPerson,
   writeRow,
 } from "@/lib/db";
+import { reminderMinutes } from "@/lib/checklist";
 import { codesMatch, deskToken } from "@/lib/gate";
 import { today } from "@/lib/format";
 import { CAMPAIGN_STATUSES, DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, values } from "@/lib/labels";
@@ -523,6 +526,14 @@ export async function unlockDesk(formData: FormData) {
   redirect("/");
 }
 
+function reminderField(formData: FormData, next: string) {
+  if (!formData.has("reminder")) return undefined;
+  const raw = String(formData.get("reminder") ?? "").trim();
+  if (!raw) return null;
+  if (reminderMinutes(raw) == null) go(next, "Use a time like 09:30.");
+  return raw;
+}
+
 export async function createTodo(formData: FormData) {
   const next = safePath(str(formData, "next"), "/");
   const title = str(formData, "title", 200);
@@ -530,6 +541,14 @@ export async function createTodo(formData: FormData) {
   const releaseId = str(formData, "release_id", 80);
   const date = day(formData, "todo_date") ?? today();
   const repeat = flag(formData, "repeat") === 1;
+  const notes = str(formData, "notes", 500);
+  const reminder = reminderField(formData, next) ?? null;
+  if (repeat) {
+    const templates = await listTemplates();
+    if (templates.some((template) => template.archived === 0 && template.title.toLowerCase() === title.toLowerCase())) {
+      go(next, "That daily task is already on the list.");
+    }
+  }
   await run(next, async () => {
     const templateId = repeat ? uid() : null;
     if (templateId) {
@@ -538,6 +557,11 @@ export async function createTodo(formData: FormData) {
         title,
         release_id: releaseId,
         created_at: now(),
+        notes,
+        reminder,
+        archived: 0,
+        sort_order: 100,
+        locked: 0,
       });
     }
     await writeRow("todos", null, {
@@ -548,6 +572,8 @@ export async function createTodo(formData: FormData) {
       completed_at: null,
       release_id: releaseId,
       template_id: templateId,
+      notes,
+      reminder,
     });
   });
 }
@@ -557,10 +583,21 @@ export async function toggleTodo(formData: FormData) {
   const next = safePath(str(formData, "next"), "/");
   const todo = id ? await getTodo(id) : null;
   if (!todo) go(next);
+  const completed = todo.done ? 0 : 1;
   await run(next, async () => {
+    const stamp = now();
     await writeRow("todos", todo.id, {
-      done: todo.done ? 0 : 1,
-      completed_at: todo.done ? null : now(),
+      done: completed,
+      completed_at: completed ? stamp : null,
+    });
+    await insert("checklist_events", {
+      id: uid(),
+      todo_id: todo.id,
+      template_id: todo.template_id,
+      title: todo.title,
+      todo_date: todo.todo_date,
+      action: completed ? "completed" : "unchecked",
+      created_at: stamp,
     });
   });
 }
@@ -572,12 +609,19 @@ export async function updateTodo(formData: FormData) {
   const todo = id ? await getTodo(id) : null;
   if (!todo) go(next, "That line is not on the checklist.");
   if (!title) go(next, "A checklist line needs words.");
+  const locked = Number(todo.template_locked) === 1;
+  const reminder = reminderField(formData, next);
   await run(next, async () => {
-    await writeRow("todos", todo.id, {
-      title,
-      todo_date: day(formData, "todo_date") ?? todo.todo_date,
-      release_id: str(formData, "release_id", 80),
-    });
+    const fields: Record<string, string | number | null> = {
+      title: locked ? todo.title : title,
+      notes: str(formData, "notes", 500),
+    };
+    if (!locked) {
+      fields.todo_date = day(formData, "todo_date") ?? todo.todo_date;
+      fields.release_id = str(formData, "release_id", 80);
+    }
+    if (reminder !== undefined) fields.reminder = reminder;
+    await writeRow("todos", todo.id, fields);
   });
 }
 
@@ -585,36 +629,82 @@ export async function updateTemplate(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/checklist");
   const title = str(formData, "title", 200);
-  if (!id) go(next, "That daily line is not on file.");
+  const template = id ? await getTemplate(id) : null;
+  if (!template) go(next, "That daily line is not on file.");
+  const reminder = reminderField(formData, next);
+  const notes = str(formData, "notes", 500);
+  if (Number(template.locked) === 1) {
+    await run(next, async () => {
+      const fields: Record<string, string | number | null> = { notes };
+      if (reminder !== undefined) fields.reminder = reminder;
+      await writeRow("checklist_templates", template.id, fields);
+      if (reminder !== undefined) {
+        await exec(
+          "UPDATE todos SET reminder = ? WHERE template_id = ? AND done = 0 AND todo_date >= ?",
+          reminder,
+          template.id,
+          today()
+        );
+      }
+    });
+  }
   if (!title) go(next, "A daily line needs words.");
+  const templates = await listTemplates();
+  if (templates.some((item) => item.id !== template.id && item.title.toLowerCase() === title.toLowerCase())) {
+    go(next, "That daily task is already on the list.");
+  }
   const releaseId = str(formData, "release_id", 80);
+  const nextReminder = reminder === undefined ? template.reminder : reminder;
   await run(next, async () => {
-    await writeRow("checklist_templates", id, { title, release_id: releaseId });
+    await writeRow("checklist_templates", template.id, {
+      title,
+      release_id: releaseId,
+      notes,
+      reminder: nextReminder,
+    });
     await exec(
-      "UPDATE todos SET title = ?, release_id = ? WHERE template_id = ? AND done = 0 AND todo_date >= ?",
+      "UPDATE todos SET title = ?, release_id = ?, reminder = ? WHERE template_id = ? AND done = 0 AND todo_date >= ?",
       title,
       releaseId,
-      id,
+      nextReminder,
+      template.id,
       today()
     );
   });
 }
 
-export async function deleteTemplate(formData: FormData) {
+export async function archiveTemplate(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/checklist");
-  if (!id) go(next);
+  const template = id ? await getTemplate(id) : null;
+  if (!template) go(next, "That daily line is not on file.");
+  if (Number(template.locked) === 1) go(next, "That daily task stays on the list.");
   await run(next, async () => {
-    await exec("DELETE FROM todos WHERE template_id = ? AND done = 0 AND todo_date >= ?", id, today());
-    await destroy("checklist_templates", id);
+    await writeRow("checklist_templates", template.id, { archived: 1 });
   });
+}
+
+export async function restoreTemplate(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), "/checklist");
+  const template = id ? await getTemplate(id) : null;
+  if (!template) go(next, "That daily line is not on file.");
+  await run(next, async () => {
+    await writeRow("checklist_templates", template.id, { archived: 0 });
+  });
+}
+
+export async function deleteTemplate(formData: FormData) {
+  await archiveTemplate(formData);
 }
 
 export async function deleteTodo(formData: FormData) {
   const id = str(formData, "id", 80);
   const next = safePath(str(formData, "next"), "/");
-  if (!id || !(await getTodo(id))) go(next);
-  await run(next, async () => { await destroy("todos", id); });
+  const todo = id ? await getTodo(id) : null;
+  if (!todo) go(next);
+  if (todo.template_id) go(next, "Daily tasks stay on the record. Uncheck one if it is not done.");
+  await run(next, async () => { await destroy("todos", todo.id); });
 }
 
 export async function markLogDone(formData: FormData) {

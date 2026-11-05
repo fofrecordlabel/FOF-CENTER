@@ -1,5 +1,6 @@
+import { prettyReminder, reminderMinutes } from "@/lib/checklist";
 import { listArtists, listListenerLogs, listLogs, listTodos } from "@/lib/db";
-import { today } from "@/lib/format";
+import { deskMinutes, today } from "@/lib/format";
 
 export type DeskAlert = {
   id: string;
@@ -13,6 +14,19 @@ export async function deskAlerts(): Promise<DeskAlert[]> {
   const [todos, artists, listenerLogs, logs] = await Promise.all([listTodos(), listArtists(), listListenerLogs(), listLogs()]);
   const alerts: DeskAlert[] = [];
   const open = todos.filter((todo) => todo.done === 0 && todo.todo_date <= day);
+  const minute = deskMinutes();
+  const reminded = open.filter((todo) => {
+    const due = reminderMinutes(todo.reminder);
+    return todo.todo_date === day && due != null && due <= minute;
+  });
+  if (reminded.length) {
+    alerts.push({
+      id: "reminders",
+      title: reminded.length === 1 ? `Reminder: ${reminded[0].title}` : `${reminded.length} reminders are due`,
+      detail: reminded.map((todo) => `${todo.title}${todo.reminder ? ` · ${prettyReminder(todo.reminder)}` : ""}`).join(" · "),
+      href: "/checklist",
+    });
+  }
   if (open.length) {
     alerts.push({
       id: "checks",

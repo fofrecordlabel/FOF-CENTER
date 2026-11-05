@@ -103,6 +103,28 @@ export function clockTime(value: string | null | undefined) {
   });
 }
 
+export function deskMinutes(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: DESK_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0") % 24;
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+  return hour * 60 + minute;
+}
+
+export function shortDate(value: string) {
+  const date = new Date(`${value}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", { month: "numeric", day: "numeric", timeZone: DESK_TIME_ZONE });
+}
+
+export function monthLabel(month: string) {
+  return prettyDate(`${month}-01`).replace(/ \d+,/, "");
+}
+
 export function addDays(day: string, days: number) {
   const date = new Date(`${day}T12:00:00`);
   date.setDate(date.getDate() + days);

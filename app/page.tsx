@@ -5,6 +5,7 @@ import { DailyTodos, PostNotifications } from "@/components/DeskToday";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
 import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
 import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, listReleaseViews, listTodos, rosterRows } from "@/lib/db";
+import { dayStats } from "@/lib/checklist";
 import { ago, compact, money, prettyDate, today } from "@/lib/format";
 import { LOG_KINDS, STAGES, labelFor, priorityTone, statusTone, RELEASE_STATUSES } from "@/lib/labels";
 
@@ -23,7 +24,7 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
   const todayLogs = doneLogs.filter((entry) => entry.log_date === today()).slice(0, 8);
   const todos = await listTodos();
   const releases = (await listReleaseViews()).map((release) => ({ id: release.id, title: release.title }));
-  const openTodos = todos.filter((todo) => todo.done === 0);
+  const todayChecks = dayStats(todos.filter((todo) => todo.todo_date === today()));
   const listenerTotal = artists.reduce((sum, artist) => sum + (artist.monthly_listeners ?? 0), 0);
   const hasListeners = artists.some((artist) => artist.monthly_listeners != null);
   const duePosts = logs.filter((entry) => entry.status === "planned" && entry.kind === "post" && entry.log_date <= today());
@@ -55,8 +56,8 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
           <span>Monthly listeners</span>
         </a>
         <Link className="glance-card" href="/checklist">
-          <b>{openTodos.length}</b>
-          <span>Open checks</span>
+          <b>{todayChecks.total ? `${todayChecks.done}/${todayChecks.total}` : "—"}</b>
+          <span>Checklist today</span>
         </Link>
         <a className="glance-card" href="#today">
           <b>{duePosts.length}</b>

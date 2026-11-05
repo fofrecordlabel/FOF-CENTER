@@ -18,6 +18,7 @@ const TABS = [
 const NAV = [
   { href: "/", label: "Desk" },
   { href: "/checklist", label: "Checklist" },
+  { href: "/checklist/activity", label: "Activity" },
   { href: "/pipeline", label: "A&R Pipeline" },
   { href: "/roster", label: "Roster" },
   { href: "/catalog", label: "Catalog" },
@@ -34,7 +35,12 @@ const NAV = [
 export function Shell({ children, alerts, day }: { children: ReactNode; alerts: DeskAlert[]; day: string }) {
   const path = usePathname();
   const [menu, setMenu] = useState(false);
-  const active = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
+  const active = (href: string) => {
+    if (href === "/") return path === "/";
+    if (href === "/checklist") return path === "/checklist";
+    return path === href || path.startsWith(`${href}/`);
+  };
+  const tabActive = (href: string) => (href === "/checklist" ? path.startsWith("/checklist") : active(href));
 
   useEffect(() => {
     setMenu(false);
@@ -99,7 +105,7 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
       </div>
       <nav className="tabbar" aria-label="Favorites">
         {TABS.map((item) => (
-          <Link key={item.href} href={item.href} className={active(item.href) ? "active" : undefined}>
+          <Link key={item.href} href={item.href} className={tabActive(item.href) ? "active" : undefined}>
             {item.label}
           </Link>
         ))}

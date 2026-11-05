@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createLog, createTodo, markLogDone } from "@/lib/actions";
 import { ChecklistLine, ReleaseChoice, ReleaseField } from "@/components/Checklist";
 import { SubmitButton } from "@/components/controls";
-import { Field } from "@/components/ui";
+import { Field, ProgressMeter } from "@/components/ui";
+import { dayStats, sortTasks } from "@/lib/checklist";
 import { prettyDate, today } from "@/lib/format";
 import { LOG_KINDS, labelFor } from "@/lib/labels";
 import type { LogView, Todo } from "@/lib/types";
@@ -58,11 +59,11 @@ export function PostNotifications({ posts }: { posts: LogView[] }) {
 
 export function DailyTodos({ todos, releases }: { todos: Todo[]; releases: ReleaseChoice[] }) {
   const day = today();
-  const open = todos.filter((todo) => todo.done === 0);
-  const done = todos.filter((todo) => todo.done === 1 && todo.todo_date === day);
-  const lines = [...open, ...done];
+  const lines = sortTasks(todos.filter((todo) => todo.todo_date === day));
+  const earlier = todos.filter((todo) => todo.done === 0 && todo.todo_date < day).length;
+  const stats = dayStats(lines);
   return (
-    <section className="card stack">
+    <section className="card stack" id="checklist">
       <div className="section-head">
         <div>
           <p className="kicker">Today</p>
@@ -72,10 +73,16 @@ export function DailyTodos({ todos, releases }: { todos: Todo[]; releases: Relea
           All days
         </Link>
       </div>
-      {lines.length === 0 ? <p className="meta">The list is clear.</p> : null}
+      <ProgressMeter done={stats.done} total={stats.total} />
+      {lines.length === 0 ? <p className="meta">Today’s list appears here as soon as the desk opens.</p> : null}
       {lines.map((todo) => (
         <ChecklistLine key={todo.id} todo={todo} next="/" releases={releases} />
       ))}
+      {earlier ? (
+        <p className="meta">
+          <Link href="/checklist">{earlier} still open from earlier days</Link>
+        </p>
+      ) : null}
       <form action={createTodo} className="form-grid compact-form">
         <input type="hidden" name="next" value="/" />
         <input type="hidden" name="todo_date" value={day} />

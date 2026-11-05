@@ -51,6 +51,21 @@ export function Balance({ cents }: { cents: number }) {
   return <span className="hot-text">{money(cents)} unrecouped</span>;
 }
 
+export function ProgressMeter({ done, total, label = "Daily checklist" }: { done: number; total: number; label?: string }) {
+  const percent = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="progress">
+      <div className="progress-top">
+        <strong>{total ? `${done}/${total} completed` : "No tasks yet"}</strong>
+        <span className={percent === 100 ? "good-text" : undefined}>{total ? `${percent}%` : "—"}</span>
+      </div>
+      <div className="progress-track" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
+        <span style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  );
+}
+
 export function BudgetBar({ budget, spent }: { budget: number; spent: number }) {
   const pct = budget > 0 ? Math.min(100, Math.round((spent / budget) * 100)) : spent > 0 ? 100 : 0;
   const over = budget > 0 && spent > budget;

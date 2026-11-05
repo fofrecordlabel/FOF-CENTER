@@ -216,7 +216,35 @@ export type Todo = {
   completed_at: string | null;
   release_id: string | null;
   template_id: string | null;
+  notes: string | null;
+  reminder: string | null;
   release_title?: string | null;
+  template_locked?: number | null;
+  template_notes?: string | null;
+  template_sort?: number | null;
+};
+
+export type ChecklistTemplate = {
+  id: string;
+  title: string;
+  release_id: string | null;
+  created_at: string;
+  notes: string | null;
+  reminder: string | null;
+  archived: number;
+  sort_order: number;
+  locked: number;
+  release_title?: string | null;
+};
+
+export type ChecklistEvent = {
+  id: string;
+  todo_id: string | null;
+  template_id: string | null;
+  title: string;
+  todo_date: string;
+  action: string;
+  created_at: string;
 };
 
 export type CampaignBooking = {

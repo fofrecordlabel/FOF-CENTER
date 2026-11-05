@@ -1,4 +1,5 @@
 import { BIGDEUCE_LOGO } from "./brand";
+import { DEFAULT_TASKS } from "./checklist";
 import { addDays, today } from "./format";
 import { isRoster, labelFor, PIPELINE_STAGES, ROSTER_STAGES, STAGES } from "./labels";
 import { query } from "./pg";
@@ -15,6 +16,8 @@ import type {
   Influencer,
   Campaign,
   CampaignBooking,
+  ChecklistEvent,
+  ChecklistTemplate,
   ListenerLog,
   LogView,
   Split,
@@ -45,6 +48,7 @@ function ready() {
 }
 
 async function ensureDesk() {
+  await seedDailyTasks();
   const named = await query<{ id: string; image_url: string | null }>(
     "SELECT id, image_url FROM artists WHERE id = ? OR lower(name) = 'bigdeucefof'",
     ["art_bigdeucefof"]
@@ -176,18 +180,50 @@ export async function listLogs() {
 }
 
 export async function listTemplates() {
-  return await many<{ id: string; title: string; release_id: string | null; release_title: string | null; created_at: string }>(
+  return await many<ChecklistTemplate>(
     `SELECT checklist_templates.*, releases.title AS release_title
      FROM checklist_templates
      LEFT JOIN releases ON releases.id = checklist_templates.release_id
-     ORDER BY checklist_templates.created_at ASC`
+     ORDER BY checklist_templates.archived ASC, checklist_templates.sort_order ASC, checklist_templates.created_at ASC`
   );
+}
+
+export async function getTemplate(id: string) {
+  return await one<ChecklistTemplate>("SELECT * FROM checklist_templates WHERE id = ?", id);
+}
+
+async function seedDailyTasks() {
+  const stamp = new Date().toISOString();
+  for (const task of DEFAULT_TASKS) {
+    try {
+      await exec(
+        `INSERT INTO checklist_templates (id, title, release_id, created_at, archived, sort_order, locked)
+         SELECT ?, ?, NULL, ?, 0, ?, 1
+         WHERE NOT EXISTS (
+           SELECT 1 FROM checklist_templates WHERE id = ? OR lower(title) = lower(?)
+         )`,
+        task.id,
+        task.title,
+        stamp,
+        task.sort_order,
+        task.id,
+        task.title
+      );
+    } catch (error) {
+      if ((error as { code?: string }).code !== "23505") throw error;
+    }
+    await exec(
+      "UPDATE checklist_templates SET locked = 1, sort_order = ? WHERE lower(title) = lower(?)",
+      task.sort_order,
+      task.title
+    );
+  }
 }
 
 async function copyDailyChecklist() {
   const day = today();
-  const templates = await query<{ id: string; title: string; release_id: string | null }>(
-    "SELECT id, title, release_id FROM checklist_templates"
+  const templates = await query<{ id: string; title: string; release_id: string | null; reminder: string | null }>(
+    "SELECT id, title, release_id, reminder FROM checklist_templates WHERE archived = 0"
   );
   if (!templates.length) return;
   const existing = await query<{ template_id: string }>(
@@ -208,6 +244,8 @@ async function copyDailyChecklist() {
         completed_at: null,
         release_id: template.release_id,
         template_id: template.id,
+        notes: null,
+        reminder: template.reminder,
       });
     } catch (error) {
       if ((error as { code?: string }).code !== "23505") throw error;
@@ -215,18 +253,29 @@ async function copyDailyChecklist() {
   }
 }
 
-export async function listTodos() {
-  await copyDailyChecklist();
-  return await many<Todo>(
-    `SELECT todos.*, releases.title AS release_title
+const TODO_SELECT = `SELECT todos.*, releases.title AS release_title,
+       checklist_templates.locked AS template_locked,
+       checklist_templates.notes AS template_notes,
+       checklist_templates.sort_order AS template_sort
      FROM todos
      LEFT JOIN releases ON releases.id = todos.release_id
-     ORDER BY todos.todo_date ASC, todos.created_at ASC`
+     LEFT JOIN checklist_templates ON checklist_templates.id = todos.template_id`;
+
+export async function listTodos() {
+  await ready();
+  await copyDailyChecklist();
+  return await many<Todo>(
+    `${TODO_SELECT}
+     ORDER BY todos.todo_date ASC, checklist_templates.sort_order ASC NULLS LAST, todos.created_at ASC`
   );
 }
 
 export async function getTodo(id: string) {
-  return await one<Todo>("SELECT * FROM todos WHERE id = ?", id);
+  return await one<Todo>(`${TODO_SELECT} WHERE todos.id = ?`, id);
+}
+
+export async function listChecklistEvents() {
+  return await many<ChecklistEvent>("SELECT * FROM checklist_events ORDER BY created_at DESC");
 }
 
 export async function listListenerLogs(artistId?: string) {
