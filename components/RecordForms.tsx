@@ -18,7 +18,7 @@ import {
   updateTrack,
 } from "@/lib/actions";
 import { dollarsInput, durationInput, formatIsrc } from "@/lib/format";
-import { DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, PLATFORMS, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, labelFor } from "@/lib/labels";
+import { CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, PLATFORMS, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, labelFor } from "@/lib/labels";
 import type { Choice } from "@/lib/labels";
 import type { Contract, Influencer, Note, Person, Project, Release, Track } from "@/lib/types";
 import { SubmitButton } from "./controls";
@@ -510,6 +510,9 @@ export function InfluencerForm({ person, next }: { person?: Influencer | null; n
       </Field>
       <Field label="Number">
         <input name="phone" inputMode="tel" autoComplete="tel" defaultValue={person?.phone ?? ""} placeholder="Phone number" />
+      </Field>
+      <Field label="Kind">
+        <Choices name="kind" list={CONTACT_KINDS} value={person?.kind ?? "influencer"} />
       </Field>
       <Field label="Platform">
         <Choices name="platform" list={PLATFORMS} value={person?.platform ?? "instagram"} />

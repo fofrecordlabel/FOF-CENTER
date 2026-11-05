@@ -188,7 +188,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   release={release}
                   campaign={campaign}
                   bookings={bookings.filter((booking) => booking.campaign_id === campaign?.id)}
-                  influencers={influencers}
+                  influencers={influencers.filter((person) => person.kind !== "curator")}
                   next="/catalog"
                 />
               </div>

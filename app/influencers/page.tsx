@@ -17,69 +17,78 @@ export default async function InfluencersPage({ searchParams }: { searchParams: 
     <>
       <PageHeader
         kicker="Contact book"
-        title="Influencers"
-        lede="Save the @ and the number. Call them from here."
+        title="Contacts"
+        lede="Playlist curators and influencers live here. Add the number, email, and rate when you have them."
       />
       <Banner message={error} />
       <section className="card stack">
         <h2>Save a contact</h2>
         <InfluencerForm next="/influencers" />
       </section>
-      {people.length === 0 ? (
-        <div className="empty section">
-          <p>No one saved yet. An @ and a number is enough to start.</p>
-        </div>
-      ) : (
-        <div className="book">
-          {people.map((person) => {
-            const profile = reach(person);
-            const phone = telHref(person.phone);
-            return (
-              <article className="contact" key={person.id}>
-                <div>
-                  <p className="kicker">{labelFor(PLATFORMS, person.platform)}</p>
-                  {profile && person.handle ? (
-                    <a className="at" href={profile} target="_blank" rel="noreferrer">
-                      {person.handle}
-                    </a>
-                  ) : (
-                    <p className="at">{person.handle || "No @ yet"}</p>
-                  )}
-                  <p className="meta">
-                    {[person.name, person.city, person.niche, person.followers ? `${compact(person.followers)} followers` : "", person.rate]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                </div>
-                <div className="contact-reach">
-                  {phone && person.phone ? (
-                    <a className="btn primary" href={phone}>
-                      {person.phone}
-                    </a>
-                  ) : (
-                    <span className="meta">No number</span>
-                  )}
-                  {person.email ? <a href={`mailto:${person.email}`}>{person.email}</a> : null}
-                  <Pill tone={statusTone(person.status)}>{labelFor(INFLUENCER_STATUSES, person.status)}</Pill>
-                </div>
-                <div className="stack">
-                  {person.notes ? <p className="meta">{person.notes}</p> : null}
-                  <details className="drawer">
-                    <summary>Edit</summary>
-                    <InfluencerForm person={person} next="/influencers" />
-                  </details>
-                  <form action={deleteInfluencer}>
-                    <input type="hidden" name="id" value={person.id} />
-                    <input type="hidden" name="next" value="/influencers" />
-                    <ConfirmSubmit className="btn danger small" label="Remove" message={`Remove ${person.name} from the contact book?`} />
-                  </form>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
+      <ContactGroup title="Playlist curators" people={people.filter((person) => person.kind === "curator")} />
+      <ContactGroup title="Influencers" people={people.filter((person) => person.kind !== "curator")} />
     </>
+  );
+}
+
+function ContactGroup({ title, people }: { title: string; people: Influencer[] }) {
+  return (
+    <section className="section">
+      <div className="section-head">
+        <h2>{title}</h2>
+        <span className="meta">{people.length}</span>
+      </div>
+      {people.length === 0 ? <p className="meta">None saved yet.</p> : null}
+      <div className="book">
+        {people.map((person) => {
+          const profile = reach(person);
+          const phone = telHref(person.phone);
+          const titleText = person.handle || person.name;
+          return (
+            <article className="contact" key={person.id}>
+              <div>
+                <p className="kicker">{person.kind === "curator" ? "Playlist curator" : labelFor(PLATFORMS, person.platform)}</p>
+                {profile ? (
+                  <a className="at" href={profile} target="_blank" rel="noreferrer">
+                    {titleText}
+                  </a>
+                ) : (
+                  <p className="at">{titleText}</p>
+                )}
+                <p className="meta">
+                  {[person.handle ? person.name : "", person.city, person.niche, person.followers ? `${compact(person.followers)} followers` : "", person.rate]
+                    .filter(Boolean)
+                    .join(" · ") || "Details still open"}
+                </p>
+              </div>
+              <div className="contact-reach">
+                {phone && person.phone ? (
+                  <a className="btn primary" href={phone}>
+                    {person.phone}
+                  </a>
+                ) : (
+                  <span className="meta">No number</span>
+                )}
+                {person.email ? <a href={`mailto:${person.email}`}>{person.email}</a> : null}
+                <Pill tone={statusTone(person.status)}>{labelFor(INFLUENCER_STATUSES, person.status)}</Pill>
+              </div>
+              <div className="stack">
+                {person.notes ? <p className="meta">{person.notes}</p> : null}
+                <details className="drawer">
+                  <summary>Edit</summary>
+                  <InfluencerForm person={person} next="/influencers" />
+                </details>
+                <form action={deleteInfluencer}>
+                  <input type="hidden" name="id" value={person.id} />
+                  <input type="hidden" name="next" value="/influencers" />
+                  <ConfirmSubmit className="btn danger small" label="Remove" message={`Remove ${person.name} from the contact book?`} />
+                </form>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

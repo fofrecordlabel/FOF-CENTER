@@ -24,7 +24,7 @@ const NAV = [
   { href: "/catalog", label: "Catalog" },
   { href: "/log", label: "Daily log" },
   { href: "/week", label: "Week" },
-  { href: "/influencers", label: "Influencers" },
+  { href: "/influencers", label: "Contacts" },
   { href: "/art", label: "Cover Art" },
   { href: "/releases", label: "Releases" },
   { href: "/deals", label: "Business Affairs" },

@@ -54,6 +54,7 @@ export type Influencer = {
   rate: string | null;
   status: string;
   notes: string | null;
+  kind: string;
   created_at: string;
 };
 

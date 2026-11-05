@@ -102,6 +102,11 @@ export const PLATFORMS: Choice[] = [
   { value: "other", label: "Other" },
 ];
 
+export const CONTACT_KINDS: Choice[] = [
+  { value: "influencer", label: "Influencer" },
+  { value: "curator", label: "Playlist curator" },
+];
+
 export const INFLUENCER_STATUSES: Choice[] = [
   { value: "prospect", label: "Prospect" },
   { value: "talking", label: "In talks" },

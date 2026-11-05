@@ -38,7 +38,7 @@ import { reminderMinutes } from "@/lib/checklist";
 import { POST_SLOTS } from "@/lib/posts";
 import { codesMatch, deskToken } from "@/lib/gate";
 import { today } from "@/lib/format";
-import { CAMPAIGN_STATUSES, DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, values } from "@/lib/labels";
+import { CAMPAIGN_STATUSES, CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, values } from "@/lib/labels";
 import { day, dollars, flag, httpUrl, mediaUrl, oneOf, optFloat, optInt, parseDuration, percent, safePath, str } from "@/lib/parse";
 import { exec, insert, uid } from "@/lib/sql";
 
@@ -465,7 +465,9 @@ export async function createInfluencer(formData: FormData) {
   const next = safePath(str(formData, "next"), "/influencers");
   const name = str(formData, "name", 160);
   if (!name) go(next, "An influencer needs a name.");
-  if (!str(formData, "handle", 120) && !str(formData, "phone", 40)) go(next, "Add an @ or a phone number.");
+  if (!str(formData, "handle", 120) && !str(formData, "phone", 40) && !str(formData, "profile_url", 400)) {
+    go(next, "Add an @, a number, or a website.");
+  }
   await run(next, async () => {
     await writeRow("influencers", null, { ...influencerFields(formData, name), created_at: now() });
   });
@@ -478,7 +480,9 @@ export async function updateInfluencer(formData: FormData) {
   const name = str(formData, "name", 160);
   if (!person) go(next, "That influencer is not on the list.");
   if (!name) go(next, "An influencer needs a name.");
-  if (!str(formData, "handle", 120) && !str(formData, "phone", 40)) go(next, "Add an @ or a phone number.");
+  if (!str(formData, "handle", 120) && !str(formData, "phone", 40) && !str(formData, "profile_url", 400)) {
+    go(next, "Add an @, a number, or a website.");
+  }
   await run(next, async () => {
     await writeRow("influencers", person.id, influencerFields(formData, name));
   });
@@ -1028,6 +1032,7 @@ function influencerFields(formData: FormData, name: string) {
     niche: str(formData, "niche", 160),
     rate: str(formData, "rate", 120),
     status: oneOf(str(formData, "status", 40), values(INFLUENCER_STATUSES), "prospect"),
+    kind: oneOf(str(formData, "kind", 40), values(CONTACT_KINDS), "influencer"),
     notes: str(formData, "notes", 4000),
   };
 }
