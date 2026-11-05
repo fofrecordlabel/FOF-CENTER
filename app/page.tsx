@@ -4,7 +4,7 @@ import { ConfirmSubmit } from "@/components/controls";
 import { DailyTodos, PostNotifications } from "@/components/DeskToday";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
 import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
-import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, listTodos, rosterRows } from "@/lib/db";
+import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, listReleaseViews, listTodos, rosterRows } from "@/lib/db";
 import { ago, compact, money, prettyDate, today } from "@/lib/format";
 import { LOG_KINDS, STAGES, labelFor, priorityTone, statusTone, RELEASE_STATUSES } from "@/lib/labels";
 
@@ -22,6 +22,7 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
   const todayCount = doneLogs.filter((entry) => entry.log_date === today()).length;
   const todayLogs = doneLogs.filter((entry) => entry.log_date === today()).slice(0, 8);
   const todos = await listTodos();
+  const releases = (await listReleaseViews()).map((release) => ({ id: release.id, title: release.title }));
   const openTodos = todos.filter((todo) => todo.done === 0);
   const listenerTotal = artists.reduce((sum, artist) => sum + (artist.monthly_listeners ?? 0), 0);
   const hasListeners = artists.some((artist) => artist.monthly_listeners != null);
@@ -81,9 +82,10 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
 
       <section className="section stack" id="today">
         <PostNotifications posts={duePosts} />
-        <DailyTodos todos={todos} />
+        <DailyTodos todos={todos} releases={releases} />
       </section>
 
+      <div className="desk-more">
       <section className="section stats">
         <Link className="stat" href="/roster">
           <b>{desk.rosterCount}</b>
@@ -242,6 +244,7 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
           ))}
         </ul>
       </section>
+      </div>
     </>
   );
 }

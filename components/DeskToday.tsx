@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createLog, createTodo, markLogDone } from "@/lib/actions";
-import { ChecklistLine } from "@/components/Checklist";
-import { PostAlert } from "@/components/PostAlert";
+import { ChecklistLine, ReleaseChoice, ReleaseField } from "@/components/Checklist";
 import { SubmitButton } from "@/components/controls";
 import { Field } from "@/components/ui";
 import { prettyDate, today } from "@/lib/format";
@@ -17,7 +16,6 @@ export function PostNotifications({ posts }: { posts: LogView[] }) {
           <p className="kicker">Post notification</p>
           <h2>{posts.length ? `${posts.length} due` : "Nothing due"}</h2>
         </div>
-        <PostAlert titles={posts.map((post) => post.title)} />
       </div>
       {posts.length === 0 ? <p className="meta">No post is waiting. Set one for today and it stays on the desk until you mark it posted.</p> : null}
       {posts.map((post) => (
@@ -58,7 +56,7 @@ export function PostNotifications({ posts }: { posts: LogView[] }) {
   );
 }
 
-export function DailyTodos({ todos }: { todos: Todo[] }) {
+export function DailyTodos({ todos, releases }: { todos: Todo[]; releases: ReleaseChoice[] }) {
   const day = today();
   const open = todos.filter((todo) => todo.done === 0);
   const done = todos.filter((todo) => todo.done === 1 && todo.todo_date === day);
@@ -76,7 +74,7 @@ export function DailyTodos({ todos }: { todos: Todo[] }) {
       </div>
       {lines.length === 0 ? <p className="meta">The list is clear.</p> : null}
       {lines.map((todo) => (
-        <ChecklistLine key={todo.id} todo={todo} next="/" />
+        <ChecklistLine key={todo.id} todo={todo} next="/" releases={releases} />
       ))}
       <form action={createTodo} className="form-grid compact-form">
         <input type="hidden" name="next" value="/" />
@@ -84,6 +82,11 @@ export function DailyTodos({ todos }: { todos: Todo[] }) {
         <Field label="Add a line" wide>
           <input name="title" required placeholder="Send the cover, call the plug, book the post" enterKeyHint="done" />
         </Field>
+        <ReleaseField releases={releases} />
+        <label className="check wide">
+          <input type="checkbox" name="repeat" value="1" />
+          <span>Every day</span>
+        </label>
         <div className="actions wide">
           <SubmitButton label="Add to today" />
         </div>

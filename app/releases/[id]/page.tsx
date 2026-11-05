@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteRelease, deleteTrack } from "@/lib/actions";
+import { ChecklistLine } from "@/components/Checklist";
 import { ConfirmSubmit } from "@/components/controls";
 import { ReleaseForm, TrackForm } from "@/components/RecordForms";
 import { Banner, Mono, PageHeader, Pill } from "@/components/ui";
-import { getRelease, listTracksForRelease } from "@/lib/db";
+import { getRelease, listTodos, listTracksForRelease } from "@/lib/db";
 import { duration, formatIsrc, money, prettyDate } from "@/lib/format";
 import { RELEASE_STATUSES, RELEASE_TYPES, labelFor, statusTone } from "@/lib/labels";
 
@@ -26,6 +27,7 @@ export default async function ReleasePage({
   const release = await getRelease(id);
   if (!release) notFound();
   const tracks = await listTracksForRelease(id);
+  const lines = (await listTodos()).filter((todo) => todo.release_id === id);
   const next = `/releases/${id}`;
 
   return (
@@ -76,6 +78,16 @@ export default async function ReleasePage({
           <summary>Add a master</summary>
           <TrackForm artistId={release.artist_id} releases={[{ id: release.id, title: release.title }]} releaseId={release.id} next={next} />
         </details>
+      </section>
+      <section className="section card stack">
+        <div className="section-head">
+          <h2>Checklist</h2>
+          <Link href="/checklist">All days</Link>
+        </div>
+        {lines.length === 0 ? <p className="meta">No checklist line is tied to this release yet.</p> : null}
+        {lines.map((todo) => (
+          <ChecklistLine key={todo.id} todo={todo} next={next} releases={[{ id: release.id, title: release.title }]} />
+        ))}
       </section>
       <section className="section card stack">
         <h2>Edit release</h2>

@@ -175,8 +175,54 @@ export async function listLogs() {
   );
 }
 
+export async function listTemplates() {
+  return await many<{ id: string; title: string; release_id: string | null; release_title: string | null; created_at: string }>(
+    `SELECT checklist_templates.*, releases.title AS release_title
+     FROM checklist_templates
+     LEFT JOIN releases ON releases.id = checklist_templates.release_id
+     ORDER BY checklist_templates.created_at ASC`
+  );
+}
+
+async function copyDailyChecklist() {
+  const day = today();
+  const templates = await query<{ id: string; title: string; release_id: string | null }>(
+    "SELECT id, title, release_id FROM checklist_templates"
+  );
+  if (!templates.length) return;
+  const existing = await query<{ template_id: string }>(
+    "SELECT template_id FROM todos WHERE todo_date = ? AND template_id IS NOT NULL",
+    [day]
+  );
+  const have = new Set(existing.map((row) => row.template_id));
+  const stamp = new Date().toISOString();
+  for (const template of templates) {
+    if (have.has(template.id)) continue;
+    try {
+      await insert("todos", {
+        id: uid(),
+        todo_date: day,
+        title: template.title,
+        done: 0,
+        created_at: stamp,
+        completed_at: null,
+        release_id: template.release_id,
+        template_id: template.id,
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code !== "23505") throw error;
+    }
+  }
+}
+
 export async function listTodos() {
-  return await many<Todo>("SELECT * FROM todos ORDER BY todo_date ASC, created_at ASC");
+  await copyDailyChecklist();
+  return await many<Todo>(
+    `SELECT todos.*, releases.title AS release_title
+     FROM todos
+     LEFT JOIN releases ON releases.id = todos.release_id
+     ORDER BY todos.todo_date ASC, todos.created_at ASC`
+  );
 }
 
 export async function getTodo(id: string) {

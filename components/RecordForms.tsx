@@ -159,7 +159,7 @@ export function ReleaseForm({
         <input name="catalog_no" defaultValue={release?.catalog_no ?? ""} placeholder="FOF-0042" />
       </Field>
       <Field label="UPC">
-        <input name="upc" defaultValue={release?.upc ?? ""} />
+        <input name="upc" inputMode="numeric" pattern="[0-9]*" defaultValue={release?.upc ?? ""} />
       </Field>
       <Field label="Imprint">
         <input name="imprint" defaultValue={release?.imprint ?? "FOF Records"} />

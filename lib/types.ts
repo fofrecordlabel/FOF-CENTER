@@ -214,6 +214,9 @@ export type Todo = {
   done: number;
   created_at: string;
   completed_at: string | null;
+  release_id: string | null;
+  template_id: string | null;
+  release_title?: string | null;
 };
 
 export type CampaignBooking = {

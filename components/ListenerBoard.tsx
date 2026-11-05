@@ -76,7 +76,7 @@ export function ListenerBoard({
           <input name="log_date" type="date" required defaultValue={today()} />
         </Field>
         <Field label="Monthly listeners">
-          <input name="listeners" inputMode="numeric" required placeholder="12000" />
+          <input name="listeners" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" required placeholder="12000" />
         </Field>
         <Field label="Note" wide>
           <input name="note" placeholder="Spotify, after the post" />

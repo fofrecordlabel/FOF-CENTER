@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   changeStage,
@@ -30,9 +31,11 @@ import {
   unlinkPerson,
   writeRow,
 } from "@/lib/db";
+import { codesMatch, deskToken } from "@/lib/gate";
 import { today } from "@/lib/format";
 import { CAMPAIGN_STATUSES, DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, values } from "@/lib/labels";
 import { day, dollars, flag, httpUrl, mediaUrl, oneOf, optFloat, optInt, parseDuration, percent, safePath, str } from "@/lib/parse";
+import { exec, insert, uid } from "@/lib/sql";
 
 function go(path: string, message?: string): never {
   revalidatePath("/", "layout");
@@ -506,16 +509,45 @@ export async function deleteLog(formData: FormData) {
   await run(next, async () => { await destroy("logs", id); });
 }
 
+export async function unlockDesk(formData: FormData) {
+  const code = str(formData, "code", 8) ?? "";
+  if (!codesMatch(code)) redirect("/lock?error=1");
+  const jar = await cookies();
+  jar.set("fof_desk", await deskToken(), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 400,
+    secure: process.env.NODE_ENV === "production",
+  });
+  redirect("/");
+}
+
 export async function createTodo(formData: FormData) {
   const next = safePath(str(formData, "next"), "/");
   const title = str(formData, "title", 200);
-  if (!title) go(next, "A to-do needs a line.");
+  if (!title) go(next, "A checklist line needs words.");
+  const releaseId = str(formData, "release_id", 80);
+  const date = day(formData, "todo_date") ?? today();
+  const repeat = flag(formData, "repeat") === 1;
   await run(next, async () => {
+    const templateId = repeat ? uid() : null;
+    if (templateId) {
+      await insert("checklist_templates", {
+        id: templateId,
+        title,
+        release_id: releaseId,
+        created_at: now(),
+      });
+    }
     await writeRow("todos", null, {
-      todo_date: day(formData, "todo_date") ?? today(),
+      todo_date: date,
       title,
       done: 0,
       created_at: now(),
+      completed_at: null,
+      release_id: releaseId,
+      template_id: templateId,
     });
   });
 }
@@ -544,7 +576,37 @@ export async function updateTodo(formData: FormData) {
     await writeRow("todos", todo.id, {
       title,
       todo_date: day(formData, "todo_date") ?? todo.todo_date,
+      release_id: str(formData, "release_id", 80),
     });
+  });
+}
+
+export async function updateTemplate(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), "/checklist");
+  const title = str(formData, "title", 200);
+  if (!id) go(next, "That daily line is not on file.");
+  if (!title) go(next, "A daily line needs words.");
+  const releaseId = str(formData, "release_id", 80);
+  await run(next, async () => {
+    await writeRow("checklist_templates", id, { title, release_id: releaseId });
+    await exec(
+      "UPDATE todos SET title = ?, release_id = ? WHERE template_id = ? AND done = 0 AND todo_date >= ?",
+      title,
+      releaseId,
+      id,
+      today()
+    );
+  });
+}
+
+export async function deleteTemplate(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), "/checklist");
+  if (!id) go(next);
+  await run(next, async () => {
+    await exec("DELETE FROM todos WHERE template_id = ? AND done = 0 AND todo_date >= ?", id, today());
+    await destroy("checklist_templates", id);
   });
 }
 
