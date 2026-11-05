@@ -634,6 +634,18 @@ a.glance-card:hover { border-color: #ffffff; }
   .phone-menu .btn { width: 100%; min-height: 52px; font-size: 17px; }
 }
 
+.post-slot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #070707;
+}
+.post-slot.done { border-color: rgba(61, 220, 132, 0.45); background: #07140d; }
+.post-slot strong { font-size: 16px; }
 .progress { display: grid; gap: 8px; }
 .progress-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
 .progress-top strong { font-size: 15px; }

@@ -17,6 +17,7 @@ import {
   getNote,
   getPerson,
   getProject,
+  listPostChecks,
   getRelease,
   getRoyalty,
   getSplit,
@@ -34,6 +35,7 @@ import {
   writeRow,
 } from "@/lib/db";
 import { reminderMinutes } from "@/lib/checklist";
+import { POST_SLOTS } from "@/lib/posts";
 import { codesMatch, deskToken } from "@/lib/gate";
 import { today } from "@/lib/format";
 import { CAMPAIGN_STATUSES, DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, values } from "@/lib/labels";
@@ -705,6 +707,28 @@ export async function deleteTodo(formData: FormData) {
   if (!todo) go(next);
   if (todo.template_id) go(next, "Daily tasks stay on the record. Uncheck one if it is not done.");
   await run(next, async () => { await destroy("todos", todo.id); });
+}
+
+export async function markPostSlot(formData: FormData) {
+  const next = safePath(str(formData, "next"), "/");
+  const time = str(formData, "slot_time", 5);
+  const slot = POST_SLOTS.find((item) => item.time === time);
+  if (!slot) go(next, "That post time is not on the schedule.");
+  const day = today();
+  const already = (await listPostChecks(day)).some((row) => row.slot_time === slot.time);
+  if (already) go(next);
+  await run(next, async () => {
+    try {
+      await insert("post_checks", {
+        id: uid(),
+        slot_date: day,
+        slot_time: slot.time,
+        posted_at: now(),
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code !== "23505") throw error;
+    }
+  });
 }
 
 export async function markLogDone(formData: FormData) {

@@ -1,18 +1,26 @@
 import { prettyReminder, reminderMinutes } from "@/lib/checklist";
-import { listArtists, listListenerLogs, listLogs, listTodos } from "@/lib/db";
+import { listArtists, listListenerLogs, listLogs, listPostChecks, listTodos } from "@/lib/db";
 import { deskMinutes, today } from "@/lib/format";
+import { postAlerts } from "@/lib/posts";
 
 export type DeskAlert = {
   id: string;
   title: string;
   detail: string;
   href: string;
+  at?: number;
 };
 
 export async function deskAlerts(): Promise<DeskAlert[]> {
   const day = today();
-  const [todos, artists, listenerLogs, logs] = await Promise.all([listTodos(), listArtists(), listListenerLogs(), listLogs()]);
-  const alerts: DeskAlert[] = [];
+  const [todos, artists, listenerLogs, logs, posted] = await Promise.all([
+    listTodos(),
+    listArtists(),
+    listListenerLogs(),
+    listLogs(),
+    listPostChecks(day),
+  ]);
+  const alerts: DeskAlert[] = [...postAlerts(posted.map((row) => row.slot_time))];
   const open = todos.filter((todo) => todo.done === 0 && todo.todo_date <= day);
   const minute = deskMinutes();
   const reminded = open.filter((todo) => {

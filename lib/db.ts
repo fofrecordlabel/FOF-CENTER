@@ -170,6 +170,13 @@ export async function listInfluencers() {
   return await many<Influencer>("SELECT * FROM influencers ORDER BY name COLLATE NOCASE");
 }
 
+export async function listPostChecks(day: string) {
+  return await many<{ slot_time: string; posted_at: string }>(
+    "SELECT slot_time, posted_at FROM post_checks WHERE slot_date = ?",
+    day
+  );
+}
+
 export async function listLogs() {
   return await many<LogView>(
     `SELECT logs.*, artists.name AS artist_name

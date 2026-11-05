@@ -4,9 +4,10 @@ import { ConfirmSubmit } from "@/components/controls";
 import { DailyTodos, PostNotifications } from "@/components/DeskToday";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
 import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
-import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, listReleaseViews, listTodos, rosterRows } from "@/lib/db";
-import { dayStats } from "@/lib/checklist";
-import { ago, compact, money, prettyDate, today } from "@/lib/format";
+import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, listPostChecks, listReleaseViews, listTodos, rosterRows } from "@/lib/db";
+import { dayStats, reminderMinutes } from "@/lib/checklist";
+import { ago, compact, deskMinutes, money, prettyDate, today } from "@/lib/format";
+import { POST_SLOTS } from "@/lib/posts";
 import { LOG_KINDS, STAGES, labelFor, priorityTone, statusTone, RELEASE_STATUSES } from "@/lib/labels";
 
 export const metadata = { title: "Desk" };
@@ -28,6 +29,9 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
   const listenerTotal = artists.reduce((sum, artist) => sum + (artist.monthly_listeners ?? 0), 0);
   const hasListeners = artists.some((artist) => artist.monthly_listeners != null);
   const duePosts = logs.filter((entry) => entry.status === "planned" && entry.kind === "post" && entry.log_date <= today());
+  const postedSlots = new Set((await listPostChecks(today())).map((row) => row.slot_time));
+  const minute = deskMinutes();
+  const openPostTimes = POST_SLOTS.filter((slot) => !postedSlots.has(slot.time) && (reminderMinutes(slot.time) ?? 0) <= minute).length;
 
   return (
     <>
@@ -60,7 +64,7 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
           <span>Checklist today</span>
         </Link>
         <a className="glance-card" href="#today">
-          <b>{duePosts.length}</b>
+          <b>{duePosts.length + openPostTimes}</b>
           <span>Posts due</span>
         </a>
         <Link className="glance-card" href="/log">
@@ -82,7 +86,7 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
       </section>
 
       <section className="section stack" id="today">
-        <PostNotifications posts={duePosts} />
+        <PostNotifications posts={duePosts} posted={[...postedSlots]} />
         <DailyTodos todos={todos} releases={releases} />
       </section>
 
