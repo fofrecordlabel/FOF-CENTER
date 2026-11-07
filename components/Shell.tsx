@@ -55,6 +55,25 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
     };
   }, [menu]);
 
+  useEffect(() => {
+    const pin = () => {
+      const view = window.visualViewport;
+      const top = view ? Math.max(0, view.offsetTop) : 0;
+      const bottom = view ? Math.max(0, window.innerHeight - view.height - view.offsetTop) : 0;
+      document.documentElement.style.setProperty("--browser-top", `${top}px`);
+      document.documentElement.style.setProperty("--browser-bottom", `${bottom}px`);
+    };
+    pin();
+    window.visualViewport?.addEventListener("resize", pin);
+    window.visualViewport?.addEventListener("scroll", pin);
+    window.addEventListener("orientationchange", pin);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", pin);
+      window.visualViewport?.removeEventListener("scroll", pin);
+      window.removeEventListener("orientationchange", pin);
+    };
+  }, []);
+
   return (
     <div className={menu ? "shell menu-open" : "shell"}>
       <aside className="rail">

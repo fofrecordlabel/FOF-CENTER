@@ -566,41 +566,47 @@ a.glance-card:hover { border-color: #ffffff; }
 @media (max-width: 1024px) {
   .shell { grid-template-columns: 1fr; }
   .rail { display: none; }
+  body, .main { overflow-x: visible; }
   .menu-button, .mobile-brand, .phone-here { display: inline-flex; }
   .mobile-brand { display: grid; }
   .mobile-brand .brand-logo { height: 36px; }
-  .phone-here { align-items: center; justify-self: end; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .phone-here { align-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .desk-kicker { display: none; }
   .topbar {
     display: grid;
-    grid-template-columns: 44px auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) 48px;
     grid-template-areas:
-      "menu brand here"
+      "brand here menu"
       "search search search";
     align-items: center;
     gap: 8px;
-    position: sticky;
-    top: 0;
-    z-index: 60;
+    position: fixed;
+    top: var(--browser-top, 0px);
+    left: 0;
+    right: 0;
+    z-index: 80;
     background: #000000;
-    margin: 0 -16px;
-    padding: calc(8px + env(safe-area-inset-top)) 16px 10px;
+    margin: 0;
+    padding: calc(8px + env(safe-area-inset-top)) 12px 10px;
+    border-bottom: 1px solid var(--line);
   }
-  .menu-button { grid-area: menu; }
+  .menu-button { grid-area: menu; justify-self: end; }
   .mobile-brand { grid-area: brand; }
   .phone-here { grid-area: here; }
   .search { grid-area: search; width: 100%; }
   .search input { min-height: 44px; }
-  .main { padding: 0 16px calc(92px + env(safe-area-inset-bottom)); }
-  html { scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+  .main {
+    padding: calc(132px + var(--browser-top, 0px) + env(safe-area-inset-top)) 16px calc(88px + var(--browser-bottom, 0px) + env(safe-area-inset-bottom));
+  }
+  html { scroll-padding-top: calc(132px + env(safe-area-inset-top)); scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
   .tabbar {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    z-index: 60;
+    bottom: max(var(--browser-bottom, 0px), env(safe-area-inset-bottom));
+    z-index: 80;
     background: #000000;
     border-top: 1px solid var(--line-strong);
     padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
@@ -634,9 +640,9 @@ a.glance-card:hover { border-color: #ffffff; }
     display: grid;
     position: fixed;
     z-index: 55;
-    top: calc(128px + env(safe-area-inset-top));
+    top: calc(132px + var(--browser-top, 0px) + env(safe-area-inset-top));
     right: 0;
-    bottom: 0;
+    bottom: calc(64px + var(--browser-bottom, 0px) + env(safe-area-inset-bottom));
     left: 0;
     gap: 8px;
     overflow: auto;
@@ -678,10 +684,7 @@ a.glance-card:hover { border-color: #ffffff; }
   h1 { font-size: 32px; }
   .page-head { margin: 14px 0 12px; }
   .lede { font-size: 14px; }
-  .main { padding: 0 16px calc(92px + env(safe-area-inset-bottom)); }
-  html { scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
   .desk-more { display: none; }
-  .main { padding-left: 16px; padding-right: 16px; }
   .form-grid, .facts, .timeline li, .sheet, .contact, .log-row, .master-line { grid-template-columns: 1fr; }
   .who { align-items: flex-start; }
   .page-head { align-items: stretch; }
@@ -713,7 +716,6 @@ a.glance-card:hover { border-color: #ffffff; }
     font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
   }
   .table-wrap td:first-child[data-label]::before { display: none; }
-  .shell.menu-open .tabbar { visibility: hidden; }
 }
 
 .post-slot {
