@@ -58,19 +58,33 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
   useEffect(() => {
     const pin = () => {
       const view = window.visualViewport;
+      const root = document.documentElement;
+      const header = document.querySelector(".topbar");
+      const tabs = document.querySelector(".tabbar");
       const top = view ? Math.max(0, view.offsetTop) : 0;
-      const bottom = view ? Math.max(0, window.innerHeight - view.height - view.offsetTop) : 0;
-      document.documentElement.style.setProperty("--browser-top", `${top}px`);
-      document.documentElement.style.setProperty("--browser-bottom", `${bottom}px`);
+      const visible = view ? view.height : window.innerHeight;
+      const layout = Math.max(window.innerHeight, root.clientHeight);
+      const covered = Math.max(0, layout - top - visible);
+      root.style.setProperty("--browser-top", `${top}px`);
+      root.style.setProperty("--vvh", `${visible}px`);
+      root.style.setProperty("--browser-bottom", `${covered}px`);
+      if (header) root.style.setProperty("--header-h", `${header.getBoundingClientRect().height}px`);
+      if (tabs) root.style.setProperty("--tab-h", `${tabs.getBoundingClientRect().height}px`);
     };
     pin();
+    const later = window.setTimeout(pin, 250);
     window.visualViewport?.addEventListener("resize", pin);
     window.visualViewport?.addEventListener("scroll", pin);
+    window.addEventListener("resize", pin);
     window.addEventListener("orientationchange", pin);
+    window.addEventListener("pageshow", pin);
     return () => {
+      window.clearTimeout(later);
       window.visualViewport?.removeEventListener("resize", pin);
       window.visualViewport?.removeEventListener("scroll", pin);
+      window.removeEventListener("resize", pin);
       window.removeEventListener("orientationchange", pin);
+      window.removeEventListener("pageshow", pin);
     };
   }, []);
 

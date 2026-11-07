@@ -566,7 +566,7 @@ a.glance-card:hover { border-color: #ffffff; }
 @media (max-width: 1024px) {
   .shell { grid-template-columns: 1fr; }
   .rail { display: none; }
-  body, .main { overflow-x: visible; }
+  html, body, .shell, .main, .wrap { overflow: visible; }
   .menu-button, .mobile-brand, .phone-here { display: inline-flex; }
   .mobile-brand { display: grid; }
   .mobile-brand .brand-logo { height: 36px; }
@@ -584,7 +584,7 @@ a.glance-card:hover { border-color: #ffffff; }
     top: var(--browser-top, 0px);
     left: 0;
     right: 0;
-    z-index: 80;
+    z-index: 90;
     background: #000000;
     margin: 0;
     padding: calc(8px + env(safe-area-inset-top)) 12px 10px;
@@ -596,17 +596,21 @@ a.glance-card:hover { border-color: #ffffff; }
   .search { grid-area: search; width: 100%; }
   .search input { min-height: 44px; }
   .main {
-    padding: calc(132px + var(--browser-top, 0px) + env(safe-area-inset-top)) 16px calc(88px + var(--browser-bottom, 0px) + env(safe-area-inset-bottom));
+    padding:
+      calc(var(--header-h, calc(124px + env(safe-area-inset-top))) + var(--browser-top, 0px))
+      16px
+      calc(var(--tab-h, 72px) + var(--browser-bottom, 0px) + env(safe-area-inset-bottom));
   }
-  html { scroll-padding-top: calc(132px + env(safe-area-inset-top)); scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+  html { scroll-padding-top: calc(var(--header-h, 132px) + env(safe-area-inset-top)); scroll-padding-bottom: calc(var(--tab-h, 72px) + env(safe-area-inset-bottom)); }
   .tabbar {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     position: fixed;
     left: 0;
     right: 0;
-    bottom: max(var(--browser-bottom, 0px), env(safe-area-inset-bottom));
-    z-index: 80;
+    top: calc(var(--browser-top, 0px) + var(--vvh, 100dvh) - var(--tab-h, 68px));
+    bottom: auto;
+    z-index: 90;
     background: #000000;
     border-top: 1px solid var(--line-strong);
     padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
@@ -639,10 +643,10 @@ a.glance-card:hover { border-color: #ffffff; }
   .phone-menu {
     display: grid;
     position: fixed;
-    z-index: 55;
-    top: calc(132px + var(--browser-top, 0px) + env(safe-area-inset-top));
+    z-index: 70;
+    top: calc(var(--header-h, 132px) + var(--browser-top, 0px));
     right: 0;
-    bottom: calc(64px + var(--browser-bottom, 0px) + env(safe-area-inset-bottom));
+    bottom: calc(var(--tab-h, 68px) + var(--browser-bottom, 0px));
     left: 0;
     gap: 8px;
     overflow: auto;
@@ -671,6 +675,14 @@ a.glance-card:hover { border-color: #ffffff; }
   }
   .phone-menu .btn { width: 100%; min-height: 52px; font-size: 17px; }
   .sheet.is-live h2, .sheet.is-live .kicker { color: var(--good); }
+}
+@media (max-width: 1024px) and (display-mode: browser) {
+  .tabbar {
+    top: min(
+      calc(var(--browser-top, 0px) + var(--vvh, 100dvh) - var(--tab-h, 68px)),
+      calc(100svh - var(--tab-h, 68px))
+    );
+  }
 }
 @keyframes menu-in {
   from { opacity: 0; transform: translateY(-10px); }
