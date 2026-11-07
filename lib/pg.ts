@@ -10,9 +10,9 @@ export function getSql() {
     globalForSql.fofSql = postgres(url, {
       ssl: "require",
       prepare: false,
-      max: 5,
-      idle_timeout: 20,
-      connect_timeout: 30,
+      max: 1,
+      idle_timeout: 5,
+      connect_timeout: 10,
       connection: { search_path: "desk" },
       types: {
         int8: {
