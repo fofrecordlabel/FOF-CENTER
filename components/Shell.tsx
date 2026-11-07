@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { DraftKeeper } from "./DraftKeeper";
 import { DeskAlerts } from "./DeskAlerts";
+import { QuietSave } from "./QuietSave";
 import { SavedNotice } from "./SavedNotice";
 import type { DeskAlert } from "@/lib/alerts";
 
@@ -101,6 +102,7 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
           <Suspense fallback={null}>
             <DraftKeeper />
             <SavedNotice />
+            <QuietSave />
           </Suspense>
           <DeskAlerts alerts={alerts} day={day} />
           {children}

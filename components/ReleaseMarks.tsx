@@ -5,18 +5,24 @@ import { setReleaseDistributor, setReleaseStatus } from "@/lib/actions";
 import { DISTRIBUTORS, RELEASE_STATUSES, statusTone } from "@/lib/labels";
 
 export function ReleaseStatus({ id, status, next }: { id: string; status: string; next: string }) {
-  const current = RELEASE_STATUSES.some((item) => item.value === status) ? status : "idea";
+  const initial = RELEASE_STATUSES.some((item) => item.value === status) ? status : "idea";
+  const [current, setCurrent] = useState(initial);
   return (
     <form action={setReleaseStatus} className="mark-form">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="next" value={next} />
       <select
-        key={current}
         name="status"
         defaultValue={current}
         className={`status-pick ${statusTone(current)}`}
         aria-label="Release status"
-        onChange={(event) => event.currentTarget.form?.requestSubmit()}
+        onChange={(event) => {
+          const value = event.currentTarget.value;
+          setCurrent(value);
+          const row = event.currentTarget.closest("tr");
+          if (row) row.className = statusTone(value);
+          event.currentTarget.form?.requestSubmit();
+        }}
       >
         {RELEASE_STATUSES.map((item) => (
           <option key={item.value} value={item.value}>

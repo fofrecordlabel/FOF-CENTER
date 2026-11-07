@@ -617,6 +617,15 @@ tr.high td:first-child { box-shadow: inset 3px 0 0 var(--amber); }
   padding: 12px 14px;
   font-weight: 650;
 }
+.saved-note.toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  z-index: 30;
+  width: min(420px, calc(100% - 32px));
+  margin: 0;
+}
 .glance { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; }
 .glance-card, a.glance-card {
   display: flex; flex-direction: column; justify-content: space-between;

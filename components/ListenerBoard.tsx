@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { createListenerLog, deleteListenerLog } from "@/lib/actions";
 import { ConfirmSubmit, SubmitButton } from "@/components/controls";
 import { ListenerChart, type ChartMark } from "@/components/ListenerChart";
@@ -21,8 +24,9 @@ export function ListenerBoard({
   marks?: ChartMark[];
   next: string;
 }) {
-  const latest = logs[logs.length - 1];
-  const previous = logs[logs.length - 2];
+  const [rows, setRows] = useState(logs);
+  const latest = rows[rows.length - 1];
+  const previous = rows[rows.length - 2];
   const current = latest?.listeners ?? artist.monthly_listeners;
   const delta = latest && previous ? latest.listeners - previous.listeners : null;
   const move = deltaLabel(delta);
@@ -59,7 +63,7 @@ export function ListenerBoard({
       </div>
 
       <ListenerChart
-        logs={logs.map((log) => ({
+        logs={rows.map((log) => ({
           id: log.id,
           artist_id: log.artist_id,
           log_date: log.log_date,
@@ -70,7 +74,24 @@ export function ListenerBoard({
         marks={marks.map((mark) => ({ id: mark.id, log_date: mark.log_date, kind: mark.kind, title: mark.title }))}
       />
 
-      <form action={createListenerLog} className="form-grid">
+      <form
+        action={async (formData) => {
+          await createListenerLog(formData);
+          const listeners = Number(String(formData.get("listeners") || "").replace(/[^\d]/g, ""));
+          if (!Number.isFinite(listeners)) return;
+          setRows((current) =>
+            [...current, {
+              id: crypto.randomUUID(),
+              artist_id: artist.id,
+              log_date: String(formData.get("log_date") || today()),
+              listeners,
+              note: String(formData.get("note") || "") || null,
+              created_at: new Date().toISOString(),
+            }].sort((a, b) => a.log_date.localeCompare(b.log_date) || a.created_at.localeCompare(b.created_at))
+          );
+        }}
+        className="form-grid"
+      >
         <input type="hidden" name="artist_id" value={artist.id} />
         <input type="hidden" name="next" value={next} />
         <Field label="Date">
@@ -87,9 +108,9 @@ export function ListenerBoard({
         </div>
       </form>
 
-      {logs.length ? (
+      {rows.length ? (
         <div>
-          {[...logs].reverse().map((log, index, list) => {
+          {[...rows].reverse().map((log, index, list) => {
             const older = list[index + 1];
             const step = older ? log.listeners - older.listeners : null;
             const stepMove = deltaLabel(step);
@@ -103,7 +124,12 @@ export function ListenerBoard({
                     {log.note ? ` · ${log.note}` : ""}
                   </p>
                 </div>
-                <form action={deleteListenerLog}>
+                <form
+                  action={async (formData) => {
+                    await deleteListenerLog(formData);
+                    setRows((current) => current.filter((row) => row.id !== String(formData.get("id") || "")));
+                  }}
+                >
                   <input type="hidden" name="id" value={log.id} />
                   <input type="hidden" name="next" value={next} />
                   <ConfirmSubmit className="btn danger small" label="Remove" message={`Remove the ${prettyDate(log.log_date)} listener log?`} />

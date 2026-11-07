@@ -27,12 +27,13 @@ export function CoverUpload({ releaseId }: { releaseId: string }) {
 
 export function MasterAudio({ trackId, src }: { trackId: string; src: string | null }) {
   const [status, setStatus] = useState("");
+  const [localSrc, setLocalSrc] = useState(src);
 
   return (
     <div className="master-audio">
-      {src ? <audio className="master-player" controls preload="metadata" src={src} /> : <p className="meta">No master audio yet.</p>}
+      {localSrc ? <audio className="master-player" controls preload="metadata" src={localSrc} /> : <p className="meta">No master audio yet.</p>}
       <label className="btn small file-btn">
-        {status || (src ? "Replace the master" : "Add the master")}
+        {status || (localSrc ? "Replace the master" : "Add the master")}
         <input
           type="file"
           accept=".wav,.wave,.mp3,audio/wav,audio/x-wav,audio/wave,audio/vnd.wave,audio/mpeg,audio/mp3,*/*"
@@ -40,7 +41,7 @@ export function MasterAudio({ trackId, src }: { trackId: string; src: string | n
             const file = event.currentTarget.files?.[0];
             event.currentTarget.value = "";
             if (!file) return;
-            void saveAudio(file, trackId, setStatus);
+            void saveAudio(file, trackId, setStatus, setLocalSrc);
           }}
         />
       </label>
@@ -64,10 +65,14 @@ export async function uploadFile(file: Blob, fields: { kind: "cover" | "audio"; 
     if (fields.trackId) body.set("track_id", fields.trackId);
     body.set("file", file.slice(part * CHUNK, (part + 1) * CHUNK), fields.name);
     const response = await fetch("/api/media", { method: "POST", body });
-    const payload = (await response.json().catch(() => null)) as { error?: string; done?: boolean } | null;
+    const payload = (await response.json().catch(() => null)) as { error?: string; done?: boolean; url?: string } | null;
     if (!response.ok) throw new Error(payload?.error || "Could not save that file.");
-    if (part === total - 1 && !payload?.done) throw new Error("The file did not finish saving.");
+    if (part === total - 1) {
+      if (!payload?.done) throw new Error("The file did not finish saving.");
+      return typeof payload.url === "string" ? payload.url : "";
+    }
   }
+  return "";
 }
 
 async function saveCover(file: File, releaseId: string, setStatus: (value: string) => void) {
@@ -75,21 +80,22 @@ async function saveCover(file: File, releaseId: string, setStatus: (value: strin
     setStatus("Making 3000×3000…");
     const blob = await squareCover(file);
     await uploadFile(blob, { kind: "cover", releaseId, mime: "image/jpeg", name: `${file.name.replace(/\.[^.]+$/, "") || "cover"}.jpg` }, setStatus);
-    window.location.reload();
+    setStatus("Saved.");
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "Could not save that cover.");
   }
 }
 
-async function saveAudio(file: File, trackId: string, setStatus: (value: string) => void) {
+async function saveAudio(file: File, trackId: string, setStatus: (value: string) => void, setLocalSrc: (value: string) => void) {
   try {
     const mime = await audioMime(file);
     if (mime !== "audio/wav" && mime !== "audio/mpeg") {
       setStatus("Use a WAV or MP3.");
       return;
     }
-    await uploadFile(file, { kind: "audio", trackId, mime, name: file.name || (mime === "audio/wav" ? "master.wav" : "master.mp3") }, setStatus);
-    window.location.reload();
+    const url = await uploadFile(file, { kind: "audio", trackId, mime, name: file.name || (mime === "audio/wav" ? "master.wav" : "master.mp3") }, setStatus);
+    if (url) setLocalSrc(url);
+    setStatus("Saved.");
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "Could not save that master.");
   }
