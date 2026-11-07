@@ -48,46 +48,6 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
     setMenu(false);
   }, [path]);
 
-  useEffect(() => {
-    document.body.style.overflow = menu ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menu]);
-
-  useEffect(() => {
-    const pin = () => {
-      const view = window.visualViewport;
-      const root = document.documentElement;
-      const header = document.querySelector(".topbar");
-      const tabs = document.querySelector(".tabbar");
-      const top = view ? Math.max(0, view.offsetTop) : 0;
-      const visible = view ? view.height : window.innerHeight;
-      const layout = Math.max(window.innerHeight, root.clientHeight);
-      const covered = Math.max(0, layout - top - visible);
-      root.style.setProperty("--browser-top", `${top}px`);
-      root.style.setProperty("--vvh", `${visible}px`);
-      root.style.setProperty("--browser-bottom", `${covered}px`);
-      if (header) root.style.setProperty("--header-h", `${header.getBoundingClientRect().height}px`);
-      if (tabs) root.style.setProperty("--tab-h", `${tabs.getBoundingClientRect().height}px`);
-    };
-    pin();
-    const later = window.setTimeout(pin, 250);
-    window.visualViewport?.addEventListener("resize", pin);
-    window.visualViewport?.addEventListener("scroll", pin);
-    window.addEventListener("resize", pin);
-    window.addEventListener("orientationchange", pin);
-    window.addEventListener("pageshow", pin);
-    return () => {
-      window.clearTimeout(later);
-      window.visualViewport?.removeEventListener("resize", pin);
-      window.visualViewport?.removeEventListener("scroll", pin);
-      window.removeEventListener("resize", pin);
-      window.removeEventListener("orientationchange", pin);
-      window.removeEventListener("pageshow", pin);
-    };
-  }, []);
-
   return (
     <div className={menu ? "shell menu-open" : "shell"}>
       <aside className="rail">
@@ -108,29 +68,29 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
         </Link>
         <p className="rail-foot">Internal</p>
       </aside>
+      <div className="topbar">
+        <button
+          type="button"
+          className="menu-button"
+          aria-label={menu ? "Close sections" : "Open sections"}
+          aria-expanded={menu}
+          onClick={() => setMenu((open) => !open)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <Link className="mobile-brand" href="/" aria-label="FOF Records">
+          <img className="brand-logo" src="/brand/fof.png" alt="" />
+        </Link>
+        <p className="phone-here">{here}</p>
+        <p className="kicker desk-kicker">FOF Records · Internal</p>
+        <form className="search" action="/search" method="get">
+          <input name="q" placeholder="Search the desk" aria-label="Search the desk" enterKeyHint="search" />
+        </form>
+      </div>
       <div className="main">
         <div className="wrap">
-          <div className="topbar">
-            <button
-              type="button"
-              className="menu-button"
-              aria-label={menu ? "Close sections" : "Open sections"}
-              aria-expanded={menu}
-              onClick={() => setMenu((open) => !open)}
-            >
-              <span />
-              <span />
-              <span />
-            </button>
-            <Link className="mobile-brand" href="/" aria-label="FOF Records">
-              <img className="brand-logo" src="/brand/fof.png" alt="" />
-            </Link>
-            <p className="phone-here">{here}</p>
-            <p className="kicker desk-kicker">FOF Records · Internal</p>
-            <form className="search" action="/search" method="get">
-              <input name="q" placeholder="Search the desk" aria-label="Search the desk" enterKeyHint="search" />
-            </form>
-          </div>
           <Suspense fallback={null}>
             <DraftKeeper />
             <SavedNotice />
