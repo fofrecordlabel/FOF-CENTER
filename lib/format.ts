@@ -42,6 +42,7 @@ export function count(value: number | null | undefined) {
 
 export function prettyDate(value: string | null | undefined) {
   if (!value) return "—";
+  if (/^\d{4}$/.test(value)) return value;
   const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: DESK_TIME_ZONE });

@@ -713,10 +713,46 @@ a.glance-card:hover { border-color: #ffffff; }
 .event-list li { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .event-list time { color: var(--faint); font-size: 13px; }
 details.drawer summary { min-height: 48px; display: flex; align-items: center; font-size: 16px; }
+.phonebook { display: grid; grid-template-columns: minmax(0, 1fr) 24px; align-items: start; gap: 4px 8px; }
+.phonebook-search { grid-column: 1 / -1; width: 100%; }
+.phonebook-scroll { min-width: 0; }
+.phonebook-letter {
+  position: sticky; top: 0; z-index: 3; margin: 0; padding: 10px 0 6px;
+  background: #000000; color: var(--good); font-size: 13px; letter-spacing: 0.08em;
+}
+.phonebook section { scroll-margin-top: 12px; }
+.contact-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start;
+  min-height: 64px; padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.contact-row strong, .contact-name { display: block; font-size: 17px; color: inherit; text-decoration: none; }
+.phonebook-index {
+  position: sticky; top: 16px; display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.phonebook-index button {
+  border: 0; background: transparent; color: var(--good); font: inherit; font-size: 11px;
+  line-height: 1.2; min-height: 16px; min-width: 22px; padding: 0;
+}
+.marks { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; }
+.down-line { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 0; }
+.spend-chart { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(34px, 1fr); gap: 6px; align-items: end; overflow-x: auto; padding-bottom: 4px; }
+.spend-bar { display: grid; gap: 4px; justify-items: center; align-items: end; min-width: 0; color: inherit; text-decoration: none; }
+.spend-bar span { display: block; width: 100%; max-width: 16px; border-radius: 6px 6px 3px 3px; background: #2a2a2a; }
+.spend-bar.on span { background: var(--good); }
+.spend-bar b, .spend-bar small { font-size: 10px; font-weight: 500; color: var(--faint); text-align: center; }
+.category-line { display: grid; grid-template-columns: 118px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.category-track { height: 8px; border-radius: 99px; background: #1c1c1c; overflow: hidden; }
+.category-track span { display: block; height: 100%; background: #ffffff; }
+.expense-line { display: flex; justify-content: space-between; gap: 12px; align-items: start; padding-top: 12px; border-top: 1px solid var(--line); }
 
 @media (max-width: 860px) {
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .event-list li { grid-template-columns: 1fr; }
   .cal a, .cal span.pad { min-height: 56px; }
   .task-line { display: grid; gap: 2px; }
+  .phonebook-letter { top: 72px; }
+  .phonebook section { scroll-margin-top: 84px; }
+  .phonebook-index { top: 96px; }
+  .category-line { grid-template-columns: minmax(0, 1fr) auto; }
+  .category-track { grid-column: 1 / -1; }
 }

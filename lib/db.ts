@@ -31,6 +31,8 @@ import type {
   Royalty,
   RoyaltyView,
   Todo,
+  Expense,
+  Takedown,
   Track,
   TrackView,
 } from "./types";
@@ -427,6 +429,18 @@ export async function listTrackViews() {
 
 export async function getTrack(id: string) {
   return await one<Track>("SELECT * FROM tracks WHERE id = ?", id);
+}
+
+export async function listTakedowns() {
+  return await many<Takedown>("SELECT * FROM takedowns ORDER BY taken_down_at DESC, created_at DESC");
+}
+
+export async function getTakedown(id: string) {
+  return await one<Takedown>("SELECT * FROM takedowns WHERE id = ?", id);
+}
+
+export async function listExpenses() {
+  return await many<Expense>("SELECT * FROM expenses ORDER BY spent_on DESC, created_at DESC");
 }
 
 export async function listProjectViews() {

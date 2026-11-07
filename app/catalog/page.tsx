@@ -2,11 +2,12 @@ import Link from "next/link";
 import { deleteRoyalty, deleteTrack } from "@/lib/actions";
 import { ConfirmSubmit } from "@/components/controls";
 import { CampaignBlock, DeliveryChecks, SplitList } from "@/components/ReleaseOps";
+import { RegistrationMarks, TakedownControls } from "@/components/TrackOps";
 import { RoyaltyForm, TrackForm } from "@/components/RecordForms";
 import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
-import { listArtists, listBookings, listCampaigns, listInfluencers, listReleaseViews, listRoyaltyViews, listSplits, listTrackViews, rosterRows } from "@/lib/db";
+import { listArtists, listBookings, listCampaigns, listInfluencers, listReleaseViews, listRoyaltyViews, listSplits, listTakedowns, listTrackViews, rosterRows } from "@/lib/db";
 import { duration, formatIsrc, initials, money, prettyDate } from "@/lib/format";
-import { RELEASE_STATUSES, RELEASE_TYPES, ROYALTY_SOURCES, labelFor, statusTone } from "@/lib/labels";
+import { RELEASE_STATUSES, RELEASE_TYPES, ROYALTY_SOURCES, STORES, labelFor, statusTone } from "@/lib/labels";
 
 export const metadata = { title: "Catalog" };
 
@@ -24,6 +25,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const campaigns = await listCampaigns();
   const bookings = await listBookings();
   const influencers = await listInfluencers();
+  const takedowns = await listTakedowns();
+  const stillDown = takedowns.filter((row) => !row.restored_at);
 
   return (
     <>
@@ -40,6 +43,19 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         </Link>
       </PageHeader>
       <Banner message={error} />
+      {stillDown.length ? (
+        <section className="card stack">
+          <h2>Put these back up</h2>
+          {stillDown.map((row) => {
+            const track = tracks.find((item) => item.id === row.track_id);
+            return (
+              <a className="meta" href={`#trk-${row.track_id}`} key={row.id}>
+                {track?.title ?? "Song"} is down on {labelFor(STORES, row.store)} since {prettyDate(row.taken_down_at)}
+              </a>
+            );
+          })}
+        </section>
+      ) : null}
 
       {roster.length ? (
         <section className="stats catalog-money">
@@ -122,7 +138,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   </div>
                   {masters.length === 0 ? <p className="meta">No masters on this cover yet.</p> : null}
                   {masters.map((track) => (
-                    <div className="master-line" key={track.id}>
+                    <div className="master-line" id={`trk-${track.id}`} key={track.id}>
                       <div>
                         <strong>
                           {track.track_number ? `${track.track_number}. ` : ""}
@@ -136,10 +152,12 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                           {" · "}
                           {duration(track.duration_sec)}
                         </p>
+                        <RegistrationMarks track={track} />
                         {track.writers || track.producers ? (
                           <p className="meta">{[track.writers ? `W ${track.writers}` : "", track.producers ? `P ${track.producers}` : ""].filter(Boolean).join(" · ")}</p>
                         ) : null}
                         <SplitList trackId={track.id} splits={splits} next="/catalog" />
+                        <TakedownControls trackId={track.id} rows={takedowns.filter((row) => row.track_id === track.id)} />
                       </div>
                       <form action={deleteTrack}>
                         <input type="hidden" name="id" value={track.id} />
@@ -201,12 +219,14 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         <section className="section card stack">
           <h2>Not on a cover yet</h2>
           {looseTracks.map((track) => (
-            <div className="master-line" key={track.id}>
+            <div className="master-line" id={`trk-${track.id}`} key={track.id}>
               <div>
                 <strong>{track.title}</strong>
                 <p className="meta">
                   {track.artist_name} · {track.isrc ? `ISRC ${formatIsrc(track.isrc)}` : "ISRC needed"} · {track.writer_ipis ? `IPI ${track.writer_ipis}` : "IPI needed"}
                 </p>
+                <RegistrationMarks track={track} />
+                <TakedownControls trackId={track.id} rows={takedowns.filter((row) => row.track_id === track.id)} />
               </div>
             </div>
           ))}

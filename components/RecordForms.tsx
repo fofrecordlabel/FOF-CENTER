@@ -250,9 +250,21 @@ export function TrackForm({
       <Field label="Publishing" wide>
         <input name="publishing" defaultValue={track?.publishing ?? "FOF Music Publishing"} />
       </Field>
-      <label className="check wide">
+      <label className="check">
         <input type="checkbox" name="explicit" value="1" defaultChecked={track?.explicit === 1} />
         <span>Explicit</span>
+      </label>
+      <label className="check">
+        <input type="checkbox" name="bmi" value="1" defaultChecked={track?.bmi === 1} />
+        <span>BMI</span>
+      </label>
+      <label className="check">
+        <input type="checkbox" name="mlc" value="1" defaultChecked={track?.mlc === 1} />
+        <span>MLC</span>
+      </label>
+      <label className="check">
+        <input type="checkbox" name="soundexchange" value="1" defaultChecked={track?.soundexchange === 1} />
+        <span>SoundExchange</span>
       </label>
       <Field label="Notes" wide>
         <textarea name="notes" defaultValue={track?.notes ?? ""} />

@@ -73,6 +73,27 @@ export const RELEASE_STATUSES: Choice[] = [
   { value: "shelved", label: "Shelved" },
 ];
 
+export const STORES: Choice[] = [
+  { value: "spotify", label: "Spotify" },
+  { value: "apple", label: "Apple Music" },
+  { value: "youtube", label: "YouTube" },
+  { value: "audiomack", label: "Audiomack" },
+  { value: "all", label: "All stores" },
+  { value: "other", label: "Other" },
+];
+
+export const EXPENSE_CATEGORIES: Choice[] = [
+  { value: "ads", label: "Ads" },
+  { value: "playlist", label: "Playlist pitching" },
+  { value: "studio", label: "Studio" },
+  { value: "video", label: "Video" },
+  { value: "artwork", label: "Artwork" },
+  { value: "promo", label: "Promo" },
+  { value: "travel", label: "Travel" },
+  { value: "software", label: "Software" },
+  { value: "other", label: "Other" },
+];
+
 export const PROJECT_KINDS: Choice[] = [
   { value: "recording", label: "Recording" },
   { value: "mixing", label: "Mixing" },

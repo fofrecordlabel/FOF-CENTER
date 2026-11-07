@@ -23,6 +23,7 @@ import {
   getSplit,
   getTemplate,
   getTodo,
+  getTakedown,
   getTrack,
   listTemplates,
   linkPerson,
@@ -38,7 +39,7 @@ import { reminderMinutes } from "@/lib/checklist";
 import { POST_SLOTS } from "@/lib/posts";
 import { codesMatch, deskToken } from "@/lib/gate";
 import { today } from "@/lib/format";
-import { CAMPAIGN_STATUSES, CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, values } from "@/lib/labels";
+import { CAMPAIGN_STATUSES, CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, EXPENSE_CATEGORIES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, STORES, values } from "@/lib/labels";
 import { day, dollars, flag, httpUrl, mediaUrl, oneOf, optFloat, optInt, parseDuration, percent, safePath, str } from "@/lib/parse";
 import { exec, insert, uid } from "@/lib/sql";
 
@@ -240,6 +241,66 @@ export async function createTrack(formData: FormData) {
     await writeRow("tracks", null, { ...trackFields(formData, artistId, release?.id ?? null, title), created_at: now() });
     await touchArtist(artistId);
     await logActivity(artistId, "Master", `${title} added.`);
+  });
+}
+
+export async function logTakedown(formData: FormData) {
+  const next = safePath(str(formData, "next"), "/catalog");
+  const trackId = str(formData, "track_id", 80);
+  const track = trackId ? await getTrack(trackId) : null;
+  if (!track) go(next, "That song is not on file.");
+  const store = oneOf(str(formData, "store", 40), values(STORES), "spotify");
+  await run(next, async () => {
+    await insert("takedowns", {
+      id: uid(),
+      track_id: track.id,
+      store,
+      taken_down_at: day(formData, "taken_down_at") ?? today(),
+      note: str(formData, "note", 500),
+      restored_at: null,
+      created_at: now(),
+    });
+    await logActivity(track.artist_id, "Takedown", `${track.title} is down.`);
+  });
+}
+
+export async function restoreTakedown(formData: FormData) {
+  const next = safePath(str(formData, "next"), "/catalog");
+  const id = str(formData, "id", 80);
+  const row = id ? await getTakedown(id) : null;
+  if (!row || row.restored_at) go(next);
+  const track = await getTrack(row.track_id);
+  await run(next, async () => {
+    await writeRow("takedowns", row.id, { restored_at: now() });
+    if (track) await logActivity(track.artist_id, "Takedown", `${track.title} is back up.`);
+  });
+}
+
+export async function createExpense(formData: FormData) {
+  const spentOn = day(formData, "spent_on") ?? today();
+  const next = `/spend?month=${spentOn.slice(0, 7)}`;
+  const amount = dollars(formData, "amount");
+  if (!amount) go(next, "Enter what you spent.");
+  const category = oneOf(str(formData, "category", 40), values(EXPENSE_CATEGORIES), "other");
+  await run(next, async () => {
+    await insert("expenses", {
+      id: uid(),
+      spent_on: spentOn,
+      category,
+      amount_cents: amount,
+      payee: str(formData, "payee", 160),
+      notes: str(formData, "notes", 500),
+      created_at: now(),
+    });
+  });
+}
+
+export async function deleteExpense(formData: FormData) {
+  const next = safePath(str(formData, "next"), "/spend");
+  const id = str(formData, "id", 80);
+  if (!id) go(next);
+  await run(next, async () => {
+    await destroy("expenses", id);
   });
 }
 
@@ -975,6 +1036,9 @@ function trackFields(formData: FormData, artistId: string, releaseId: string | n
     master_owner: str(formData, "master_owner", 160) ?? "FOF Records",
     publishing: str(formData, "publishing", 160),
     notes: str(formData, "notes", 2000),
+    bmi: flag(formData, "bmi"),
+    mlc: flag(formData, "mlc"),
+    soundexchange: flag(formData, "soundexchange"),
   };
 }
 

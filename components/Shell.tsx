@@ -30,6 +30,7 @@ const NAV = [
   { href: "/deals", label: "Business Affairs" },
   { href: "/people", label: "Directory" },
   { href: "/projects", label: "Budgets" },
+  { href: "/spend", label: "Spending" },
 ];
 
 export function Shell({ children, alerts, day }: { children: ReactNode; alerts: DeskAlert[]; day: string }) {

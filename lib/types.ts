@@ -108,6 +108,29 @@ export type Track = {
   master_owner: string | null;
   publishing: string | null;
   notes: string | null;
+  bmi: number;
+  mlc: number;
+  soundexchange: number;
+  created_at: string;
+};
+
+export type Takedown = {
+  id: string;
+  track_id: string;
+  store: string;
+  taken_down_at: string;
+  note: string | null;
+  restored_at: string | null;
+  created_at: string;
+};
+
+export type Expense = {
+  id: string;
+  spent_on: string;
+  category: string;
+  amount_cents: number;
+  payee: string | null;
+  notes: string | null;
   created_at: string;
 };
 
