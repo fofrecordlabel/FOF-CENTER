@@ -8,7 +8,7 @@ import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, listPost
 import { dayStats, reminderMinutes } from "@/lib/checklist";
 import { ago, compact, deskMinutes, money, prettyDate, today } from "@/lib/format";
 import { POST_SLOTS } from "@/lib/posts";
-import { LOG_KINDS, STAGES, labelFor, priorityTone, statusTone, RELEASE_STATUSES } from "@/lib/labels";
+import { LOG_KINDS, STAGES, labelFor, lineClass, priorityTone, statusTone, RELEASE_STATUSES } from "@/lib/labels";
 
 export const metadata = { title: "Desk" };
 
@@ -168,7 +168,7 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
             <Link href="/releases">Releases</Link>
           </div>
           {desk.coming.map((release) => (
-            <Link className={release.status === "released" ? "line live" : "line"} key={release.id} href={`/releases/${release.id}`}>
+            <Link className={lineClass(release.status)} key={release.id} href={`/releases/${release.id}`}>
               <Mono name={release.title} image={release.cover_url} />
               <div>
                 <strong>{release.title}</strong>

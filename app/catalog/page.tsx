@@ -9,7 +9,7 @@ import { RoyaltyForm, TrackForm } from "@/components/RecordForms";
 import { Balance, Banner, Mono, PageHeader } from "@/components/ui";
 import { listArtists, listBookings, listCampaigns, listInfluencers, listReleaseViews, listRoyaltyViews, listSplits, listTakedowns, listTrackViews, rosterRows } from "@/lib/db";
 import { duration, formatIsrc, initials, money, prettyDate } from "@/lib/format";
-import { RELEASE_TYPES, ROYALTY_SOURCES, STORES, labelFor } from "@/lib/labels";
+import { RELEASE_TYPES, ROYALTY_SOURCES, STORES, labelFor, sheetClass } from "@/lib/labels";
 
 export const metadata = { title: "Catalog" };
 
@@ -46,13 +46,18 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
       </PageHeader>
       <Banner message={error} />
       {stillDown.length ? (
-        <section className="card stack">
-          <h2>Put these back up</h2>
+        <section className="down-board">
+          <p className="kicker">Takedowns</p>
+          <h2>{stillDown.length} still down</h2>
           {stillDown.map((row) => {
             const track = tracks.find((item) => item.id === row.track_id);
             return (
-              <a className="meta" href={`#trk-${row.track_id}`} key={row.id}>
-                {track?.title ?? "Song"} is down on {labelFor(STORES, row.store)} since {prettyDate(row.taken_down_at)}
+              <a className="down-card" href={`#trk-${row.track_id}`} key={row.id}>
+                <i aria-hidden="true" />
+                <span>
+                  <b>{track?.title ?? "Song"}</b>
+                  Down on {labelFor(STORES, row.store)} since {prettyDate(row.taken_down_at)}
+                </span>
               </a>
             );
           })}
@@ -99,7 +104,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           const gross = lines.reduce((sum, line) => sum + line.gross_cents, 0);
           const campaign = campaigns.find((item) => item.release_id === release.id) ?? null;
           return (
-            <section className={release.status === "released" ? "sheet is-live" : "sheet"} id={`rel-${release.id}`} key={release.id}>
+            <section className={sheetClass(release.status)} id={`rel-${release.id}`} key={release.id}>
               <div className="sheet-art">
                 <div className="cover-frame">
                   {release.cover_url ? <img src={release.cover_url} alt={release.title} /> : <span className="cover-fallback">{initials(release.title)}</span>}

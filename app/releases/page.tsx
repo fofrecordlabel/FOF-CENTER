@@ -4,7 +4,7 @@ import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
 import { Banner, Mono, PageHeader } from "@/components/ui";
 import { listArtists, listReleaseViews } from "@/lib/db";
 import { money, prettyDate } from "@/lib/format";
-import { RELEASE_STATUSES, RELEASE_TYPES, labelFor } from "@/lib/labels";
+import { RELEASE_STATUSES, RELEASE_TYPES, labelFor, statusTone } from "@/lib/labels";
 
 export const metadata = { title: "Releases" };
 
@@ -19,9 +19,9 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
       <PageHeader kicker="Release schedule" title="Releases" lede="Singles, EPs, and albums. Street date, catalog number, and who it belongs to." />
       <Banner message={error} />
       <div className="filters">
-        <Link className={current === "all" ? "pill acid" : "pill"} href="/releases">All</Link>
+        <Link className={current === "all" ? "pill acid on" : "pill"} href="/releases">All</Link>
         {RELEASE_STATUSES.map((item) => (
-          <Link key={item.value} className={current === item.value ? "pill acid" : "pill"} href={`/releases?status=${item.value}`}>
+          <Link key={item.value} className={`pill ${statusTone(item.value)}${current === item.value ? " on" : ""}`} href={`/releases?status=${item.value}`}>
             {item.label}
           </Link>
         ))}
@@ -39,7 +39,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
           </thead>
           <tbody>
             {releases.map((release) => (
-              <tr key={release.id}>
+              <tr className={statusTone(release.status)} key={release.id}>
                 <td data-label="Release">
                   <div className="release-cell">
                     <Mono name={release.title} image={release.cover_url} />

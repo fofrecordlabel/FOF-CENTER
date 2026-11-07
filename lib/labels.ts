@@ -222,3 +222,19 @@ export function statusTone(status: string) {
   if (["terminated", "expired", "shelved", "killed", "passed", "paused", "idea", "unreleased"].includes(status)) return "mute";
   return "";
 }
+
+export function sheetClass(status: string) {
+  const tone = statusTone(status);
+  if (tone === "good") return "sheet is-live";
+  if (tone === "down") return "sheet is-down";
+  if (tone === "high") return "sheet is-work";
+  return "sheet";
+}
+
+export function lineClass(status: string) {
+  const tone = statusTone(status);
+  if (tone === "good") return "line live";
+  if (tone === "down") return "line down";
+  if (tone === "high") return "line work";
+  return "line";
+}

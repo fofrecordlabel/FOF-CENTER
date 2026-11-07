@@ -172,7 +172,7 @@ export function DossierView({ file, listeners = [], marks = [] }: { file: Dossie
           <Link href="/catalog">Open the catalog</Link>
         </div>
         {file.releases.map((release) => (
-          <article className="card stack" key={release.id}>
+          <article className={`card stack tone-${statusTone(release.status) || "plain"}`} key={release.id}>
             <div className="section-head">
               <div className="who">
                 <Mono name={release.title} image={release.cover_url} />

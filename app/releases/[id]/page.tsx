@@ -9,7 +9,7 @@ import { CoverUpload, MasterAudio } from "@/components/SongMedia";
 import { Banner, Mono, PageHeader } from "@/components/ui";
 import { getRelease, listTodos, listTracksForRelease } from "@/lib/db";
 import { duration, formatIsrc, money, prettyDate } from "@/lib/format";
-import { RELEASE_TYPES, labelFor } from "@/lib/labels";
+import { RELEASE_TYPES, labelFor, statusTone } from "@/lib/labels";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,6 +35,7 @@ export default async function ReleasePage({
   return (
     <>
       <Banner message={error} />
+      <div className={`desk-tone ${statusTone(release.status)}`}>
       <PageHeader
         kicker={release.artist_name}
         title={release.title}
@@ -45,6 +46,7 @@ export default async function ReleasePage({
         <Link className="btn" href={`/artists/${release.artist_id}`}>Artist file</Link>
         <Link className="btn" href="/art">3000×3000 art</Link>
       </PageHeader>
+      </div>
       <div className="who" style={{ marginBottom: 16 }}>
         <Mono name={release.title} image={release.cover_url} large />
         <CoverUpload releaseId={release.id} />
