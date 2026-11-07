@@ -1,17 +1,19 @@
 import { ArtConverter } from "@/components/ArtConverter";
 import { PageHeader } from "@/components/ui";
+import { listReleaseViews } from "@/lib/db";
 
 export const metadata = { title: "Cover art" };
 
-export default function ArtPage() {
+export default async function ArtPage() {
+  const releases = (await listReleaseViews()).map((release) => ({ id: release.id, title: release.title, artist_name: release.artist_name }));
   return (
     <>
       <PageHeader
         kicker="Delivery"
         title="3000×3000"
-        lede="Turn any song image into the square cover file distributors ask for. Nothing is uploaded. The file stays on this computer until you download it."
+        lede="Any photo you upload is cropped to a square, saved at 3000×3000, and kept on the song."
       />
-      <ArtConverter />
+      <ArtConverter releases={releases} />
     </>
   );
 }

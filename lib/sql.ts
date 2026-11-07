@@ -1,6 +1,6 @@
 import { query } from "./pg";
 
-export type SqlValue = string | number | bigint | null;
+export type SqlValue = string | number | bigint | null | Uint8Array;
 
 const IDENT = /^[a-z_]+$/;
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { deleteRoyalty, deleteTrack } from "@/lib/actions";
 import { ConfirmSubmit } from "@/components/controls";
 import { CampaignBlock, DeliveryChecks, SplitList } from "@/components/ReleaseOps";
+import { CoverUpload, MasterAudio } from "@/components/SongMedia";
 import { RegistrationMarks, TakedownControls } from "@/components/TrackOps";
 import { RoyaltyForm, TrackForm } from "@/components/RecordForms";
 import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
@@ -103,11 +104,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   {release.cover_url ? <img src={release.cover_url} alt={release.title} /> : <span className="cover-fallback">{initials(release.title)}</span>}
                 </div>
                 <div className="actions">
-                  <Link className="btn small" href={`/releases/${release.id}`}>
-                    {release.cover_url ? "Change cover" : "Set the cover"}
-                  </Link>
+                  <CoverUpload releaseId={release.id} />
                   <Link className="btn small" href="/art">
-                    3000×3000
+                    Adjust 3000×3000
                   </Link>
                 </div>
               </div>
@@ -157,6 +156,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                           <p className="meta">{[track.writers ? `W ${track.writers}` : "", track.producers ? `P ${track.producers}` : ""].filter(Boolean).join(" · ")}</p>
                         ) : null}
                         <SplitList trackId={track.id} splits={splits} next="/catalog" />
+                        <MasterAudio trackId={track.id} src={track.audio_url} />
                         <TakedownControls trackId={track.id} rows={takedowns.filter((row) => row.track_id === track.id)} />
                       </div>
                       <form action={deleteTrack}>

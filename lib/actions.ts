@@ -41,6 +41,7 @@ import { codesMatch, deskToken } from "@/lib/gate";
 import { today } from "@/lib/format";
 import { CAMPAIGN_STATUSES, CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, EXPENSE_CATEGORIES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, STORES, values } from "@/lib/labels";
 import { day, dollars, flag, httpUrl, mediaUrl, oneOf, optFloat, optInt, parseDuration, percent, safePath, str } from "@/lib/parse";
+import { forgetMedia } from "@/lib/media";
 import { exec, insert, uid } from "@/lib/sql";
 
 function go(path: string, message?: string): never {
@@ -328,6 +329,7 @@ export async function deleteTrack(formData: FormData) {
   const track = id ? await getTrack(id) : null;
   if (!track) go(next);
   await run(next, async () => {
+    await forgetMedia(track.audio_url);
     await destroy("tracks", track.id);
     await touchArtist(track.artist_id);
     await logActivity(track.artist_id, "Master", `${track.title} removed.`);

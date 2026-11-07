@@ -3,6 +3,7 @@ import { deleteContract, deleteNote, deleteProject, deleteRelease, deleteRoyalty
 import { ConfirmSubmit, StageSelect } from "@/components/controls";
 import { DealForm, NoteForm, ProjectForm, ReleaseForm, RoyaltyForm, TeamForm, TrackForm } from "@/components/RecordForms";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
+import { CoverUpload, MasterAudio } from "@/components/SongMedia";
 import { Balance, BudgetBar, Mono, Pill } from "@/components/ui";
 import { ago, compact, duration, formatIsrc, money, prettyDate, rate, socialUrl, term } from "@/lib/format";
 import { DEAL_STATUSES, DEAL_TYPES, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, STAGES, isRoster, labelFor, priorityTone, stageTone, statusTone } from "@/lib/labels";
@@ -184,6 +185,7 @@ export function DossierView({ file, listeners = [], marks = [] }: { file: Dossie
               </div>
               <Pill tone={statusTone(release.status)}>{labelFor(RELEASE_STATUSES, release.status)}</Pill>
             </div>
+            <CoverUpload releaseId={release.id} />
             {release.tracks.map((track) => (
               <div className="track" key={track.id}>
                 <strong>
@@ -197,6 +199,7 @@ export function DossierView({ file, listeners = [], marks = [] }: { file: Dossie
                     .join(" · ")}
                   {track.explicit ? " · Explicit" : ""}
                 </p>
+                <MasterAudio trackId={track.id} src={track.audio_url} />
                 <details className="drawer wide">
                   <summary>Edit master</summary>
                   <TrackForm artistId={artist.id} releases={releases} releaseId={release.id} track={track} next={next} />

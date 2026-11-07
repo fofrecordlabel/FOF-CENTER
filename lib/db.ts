@@ -692,7 +692,12 @@ export async function removeArtist(id: string) {
 }
 
 export async function removeRelease(id: string) {
+  const release = await getRelease(id);
+  const tracks = await listTracksForRelease(id);
   await exec("UPDATE projects SET release_id = NULL WHERE release_id = ?", id);
   await exec("UPDATE royalties SET release_id = NULL WHERE release_id = ?", id);
   await exec("DELETE FROM releases WHERE id = ?", id);
+  const { forgetMedia } = await import("./media");
+  if (release) await forgetMedia(release.cover_url);
+  for (const track of tracks) await forgetMedia(track.audio_url);
 }

@@ -4,6 +4,7 @@ import { deleteRelease, deleteTrack } from "@/lib/actions";
 import { ChecklistLine } from "@/components/Checklist";
 import { ConfirmSubmit } from "@/components/controls";
 import { ReleaseForm, TrackForm } from "@/components/RecordForms";
+import { CoverUpload, MasterAudio } from "@/components/SongMedia";
 import { Banner, Mono, PageHeader, Pill } from "@/components/ui";
 import { getRelease, listTodos, listTracksForRelease } from "@/lib/db";
 import { duration, formatIsrc, money, prettyDate } from "@/lib/format";
@@ -44,6 +45,7 @@ export default async function ReleasePage({
       </PageHeader>
       <div className="who" style={{ marginBottom: 16 }}>
         <Mono name={release.title} image={release.cover_url} large />
+        <CoverUpload releaseId={release.id} />
         <div className="meta">
           <div>{release.release_date ? prettyDate(release.release_date) : "No street date"}</div>
           <div>{release.upc ? `UPC ${release.upc}` : "No UPC"}</div>
@@ -62,6 +64,7 @@ export default async function ReleasePage({
                 {[track.isrc ? `ISRC ${formatIsrc(track.isrc)}` : "ISRC needed", track.writer_ipis ? `IPI ${track.writer_ipis}` : "IPI needed", track.writers ? `W ${track.writers}` : "", track.producers ? `P ${track.producers}` : "", track.master_owner, track.publishing].filter(Boolean).join(" · ")}
               </p>
             </div>
+            <MasterAudio trackId={track.id} src={track.audio_url} />
             {track.notes ? <p className="meta">{track.notes}</p> : null}
             <details className="drawer">
               <summary>Edit master</summary>

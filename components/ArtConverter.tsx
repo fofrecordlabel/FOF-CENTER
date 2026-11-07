@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { uploadFile } from "@/components/SongMedia";
 
 const SIZE = 3000;
 
 type Mode = "cover" | "contain";
 
-export function ArtConverter() {
+export function ArtConverter({ releases = [] }: { releases?: { id: string; title: string; artist_name: string }[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fileName, setFileName] = useState("cover");
   const [mode, setMode] = useState<Mode>("cover");
@@ -14,6 +15,8 @@ export function ArtConverter() {
   const [source, setSource] = useState<{ width: number; height: number; name: string } | null>(null);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
+  const [releaseId, setReleaseId] = useState(releases[0]?.id ?? "");
+  const [saving, setSaving] = useState(false);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
   function paint(image: HTMLImageElement, nextMode: Mode, nextBackground: string) {
@@ -63,6 +66,39 @@ export function ArtConverter() {
     setMode(nextMode);
     setBackground(nextBackground);
     if (imageRef.current) paint(imageRef.current, nextMode, nextBackground);
+  }
+
+  function saveOnSong() {
+    const canvas = canvasRef.current;
+    if (!canvas || !ready || !releaseId) return;
+    setSaving(true);
+    setMessage("Saving the 3000×3000 cover on the song.");
+    const send = (quality: number) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            setSaving(false);
+            setMessage("Could not make the cover.");
+            return;
+          }
+          if (blob.size > 3_500_000 && quality > 0.62) {
+            send(quality - 0.08);
+            return;
+          }
+          void uploadFile(blob, { kind: "cover", releaseId, mime: "image/jpeg", name: `${fileName || "cover"}.jpg` })
+            .then(() => {
+              window.location.href = `/catalog#rel-${releaseId}`;
+            })
+            .catch((error: unknown) => {
+              setSaving(false);
+              setMessage(error instanceof Error ? error.message : "Could not save that cover.");
+            });
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+    send(0.92);
   }
 
   function download(kind: "jpeg" | "png") {
@@ -125,13 +161,30 @@ export function ArtConverter() {
         </div>
         {message ? <p className="meta">{message}</p> : null}
         <div className="actions">
-          <button type="button" className="btn primary" disabled={!ready} onClick={() => download("jpeg")}>
+          <button type="button" className="btn" disabled={!ready} onClick={() => download("jpeg")}>
             Download JPEG
           </button>
           <button type="button" className="btn" disabled={!ready} onClick={() => download("png")}>
             Download PNG
           </button>
         </div>
+        {releases.length ? (
+          <>
+            <label className="field">
+              <span>Save on a song</span>
+              <select value={releaseId} onChange={(event) => setReleaseId(event.target.value)}>
+                {releases.map((release) => (
+                  <option key={release.id} value={release.id}>
+                    {release.artist_name} — {release.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="btn primary" disabled={!ready || saving || !releaseId} onClick={() => void saveOnSong()}>
+              {saving ? "Saving…" : "Save 3000×3000"}
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   );

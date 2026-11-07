@@ -16,7 +16,7 @@ export function DeliveryChecks({
   const missingIpi = masters.filter((track) => !track.writer_ipis?.trim());
   const items = [
     { label: "Cover", ok: Boolean(release.cover_url), miss: "Set the cover" },
-    { label: "3000×3000", ok: Boolean(release.cover_url), miss: "Make the square, then set it" },
+    { label: "3000×3000", ok: Boolean(release.cover_url?.startsWith("/media/")), miss: "Upload the cover so it is saved at 3000×3000" },
     { label: "UPC", ok: Boolean(release.upc), miss: "UPC missing" },
     { label: "Distributor", ok: Boolean(release.distributor), miss: "Distributor missing" },
     { label: "Masters", ok: masters.length > 0, miss: "No masters" },

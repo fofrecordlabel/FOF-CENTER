@@ -111,6 +111,7 @@ export type Track = {
   bmi: number;
   mlc: number;
   soundexchange: number;
+  audio_url: string | null;
   created_at: string;
 };
 
