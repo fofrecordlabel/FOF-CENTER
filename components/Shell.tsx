@@ -42,6 +42,7 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
     return path === href || path.startsWith(`${href}/`);
   };
   const tabActive = (href: string) => (href === "/checklist" ? path.startsWith("/checklist") : active(href));
+  const here = NAV.find((item) => active(item.href))?.label ?? "Desk";
 
   useEffect(() => {
     setMenu(false);
@@ -91,6 +92,7 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
             <Link className="mobile-brand" href="/" aria-label="FOF Records">
               <img className="brand-logo" src="/brand/fof.png" alt="" />
             </Link>
+            <p className="phone-here">{here}</p>
             <p className="kicker desk-kicker">FOF Records · Internal</p>
             <form className="search" action="/search" method="get">
               <input name="q" placeholder="Search the desk" aria-label="Search the desk" enterKeyHint="search" />

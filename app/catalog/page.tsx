@@ -98,7 +98,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           const gross = lines.reduce((sum, line) => sum + line.gross_cents, 0);
           const campaign = campaigns.find((item) => item.release_id === release.id) ?? null;
           return (
-            <section className="sheet" id={`rel-${release.id}`} key={release.id}>
+            <section className={release.status === "released" ? "sheet is-live" : "sheet"} id={`rel-${release.id}`} key={release.id}>
               <div className="sheet-art">
                 <div className="cover-frame">
                   {release.cover_url ? <img src={release.cover_url} alt={release.title} /> : <span className="cover-fallback">{initials(release.title)}</span>}
