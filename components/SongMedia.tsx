@@ -35,7 +35,7 @@ export function MasterAudio({ trackId, src }: { trackId: string; src: string | n
         {status || (src ? "Replace the master" : "Add the master")}
         <input
           type="file"
-          accept="audio/*,.mp3,.m4a,.wav,.aac,.flac,.aiff"
+          accept=".wav,.wave,.mp3,audio/wav,audio/x-wav,audio/wave,audio/vnd.wave,audio/mpeg,audio/mp3,*/*"
           onChange={(event) => {
             const file = event.currentTarget.files?.[0];
             event.currentTarget.value = "";
@@ -83,7 +83,12 @@ async function saveCover(file: File, releaseId: string, setStatus: (value: strin
 
 async function saveAudio(file: File, trackId: string, setStatus: (value: string) => void) {
   try {
-    await uploadFile(file, { kind: "audio", trackId, mime: audioMime(file), name: file.name }, setStatus);
+    const mime = await audioMime(file);
+    if (mime !== "audio/wav" && mime !== "audio/mpeg") {
+      setStatus("Use a WAV or MP3.");
+      return;
+    }
+    await uploadFile(file, { kind: "audio", trackId, mime, name: file.name || (mime === "audio/wav" ? "master.wav" : "master.mp3") }, setStatus);
     window.location.reload();
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "Could not save that master.");
@@ -146,14 +151,19 @@ function squeeze(canvas: HTMLCanvasElement) {
   });
 }
 
-function audioMime(file: File) {
-  if (file.type.startsWith("audio/")) return file.type === "audio/mp3" ? "audio/mpeg" : file.type;
+async function audioMime(file: File) {
   const name = file.name.toLowerCase();
+  if (name.endsWith(".wav") || name.endsWith(".wave")) return "audio/wav";
   if (name.endsWith(".mp3")) return "audio/mpeg";
-  if (name.endsWith(".m4a")) return "audio/mp4";
-  if (name.endsWith(".wav")) return "audio/wav";
-  if (name.endsWith(".aac")) return "audio/aac";
-  if (name.endsWith(".flac")) return "audio/flac";
-  if (name.endsWith(".aiff") || name.endsWith(".aif")) return "audio/aiff";
-  return file.type;
+  const type = file.type.toLowerCase().split(";")[0].trim();
+  if (type === "audio/wav" || type === "audio/x-wav" || type === "audio/wave" || type === "audio/vnd.wave" || type === "audio/x-pn-wav") return "audio/wav";
+  if (type === "audio/mpeg" || type === "audio/mp3" || type === "audio/mpeg3" || type === "audio/x-mpeg" || type === "audio/x-mp3") return "audio/mpeg";
+  const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const riff = head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46;
+  const wave = head[8] === 0x57 && head[9] === 0x41 && head[10] === 0x56 && head[11] === 0x45;
+  if (riff && wave) return "audio/wav";
+  const id3 = head[0] === 0x49 && head[1] === 0x44 && head[2] === 0x33;
+  const frame = head[0] === 0xff && (head[1] & 0xe0) === 0xe0;
+  if (id3 || frame) return "audio/mpeg";
+  return "";
 }
