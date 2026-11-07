@@ -18,7 +18,7 @@ import {
   updateTrack,
 } from "@/lib/actions";
 import { dollarsInput, durationInput, formatIsrc } from "@/lib/format";
-import { CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, INFLUENCER_STATUSES, PLATFORMS, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, labelFor } from "@/lib/labels";
+import { CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, DISTRIBUTORS, INFLUENCER_STATUSES, PLATFORMS, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, labelFor } from "@/lib/labels";
 import type { Choice } from "@/lib/labels";
 import type { Contract, Influencer, Note, Person, Project, Release, Track } from "@/lib/types";
 import { SubmitButton } from "./controls";
@@ -165,7 +165,20 @@ export function ReleaseForm({
         <input name="imprint" defaultValue={release?.imprint ?? "FOF Records"} />
       </Field>
       <Field label="Distributor">
-        <input name="distributor" defaultValue={release?.distributor ?? ""} />
+        <select name="distributor" defaultValue={DISTRIBUTORS.some((item) => item.value === release?.distributor) || !release?.distributor ? (release?.distributor ?? "") : release.distributor}>
+          <option value="">No distributor</option>
+          {DISTRIBUTORS.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+          {release?.distributor && !DISTRIBUTORS.some((item) => item.value === release.distributor) ? (
+            <option value={release.distributor}>{release.distributor}</option>
+          ) : null}
+        </select>
+      </Field>
+      <Field label="Or add one">
+        <input name="distributor_custom" placeholder="Another distributor" maxLength={120} />
       </Field>
       <Field label="Budget, USD">
         <input name="budget" inputMode="decimal" min="0" step="0.01" defaultValue={dollarsInput(release?.budget_cents)} />

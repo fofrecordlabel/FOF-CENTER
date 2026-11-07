@@ -3,10 +3,11 @@ import { deleteContract, deleteNote, deleteProject, deleteRelease, deleteRoyalty
 import { ConfirmSubmit, StageSelect } from "@/components/controls";
 import { DealForm, NoteForm, ProjectForm, ReleaseForm, RoyaltyForm, TeamForm, TrackForm } from "@/components/RecordForms";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
+import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
 import { CoverUpload, MasterAudio } from "@/components/SongMedia";
 import { Balance, BudgetBar, Mono, Pill } from "@/components/ui";
 import { ago, compact, duration, formatIsrc, money, prettyDate, rate, socialUrl, term } from "@/lib/format";
-import { DEAL_STATUSES, DEAL_TYPES, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, STAGES, isRoster, labelFor, priorityTone, stageTone, statusTone } from "@/lib/labels";
+import { DEAL_STATUSES, DEAL_TYPES, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, STAGES, isRoster, labelFor, priorityTone, stageTone, statusTone } from "@/lib/labels";
 import type { Dossier, ListenerLog } from "@/lib/types";
 
 export function DossierView({ file, listeners = [], marks = [] }: { file: Dossier; listeners?: ListenerLog[]; marks?: ChartMark[] }) {
@@ -183,7 +184,10 @@ export function DossierView({ file, listeners = [], marks = [] }: { file: Dossie
                   </p>
                 </div>
               </div>
-              <Pill tone={statusTone(release.status)}>{labelFor(RELEASE_STATUSES, release.status)}</Pill>
+              <div className="release-tools">
+                <DistributorPick id={release.id} distributor={release.distributor} next={next} />
+                <ReleaseStatus id={release.id} status={release.status} next={next} />
+              </div>
             </div>
             <CoverUpload releaseId={release.id} />
             {release.tracks.map((track) => (

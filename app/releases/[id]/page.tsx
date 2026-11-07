@@ -4,11 +4,12 @@ import { deleteRelease, deleteTrack } from "@/lib/actions";
 import { ChecklistLine } from "@/components/Checklist";
 import { ConfirmSubmit } from "@/components/controls";
 import { ReleaseForm, TrackForm } from "@/components/RecordForms";
+import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
 import { CoverUpload, MasterAudio } from "@/components/SongMedia";
-import { Banner, Mono, PageHeader, Pill } from "@/components/ui";
+import { Banner, Mono, PageHeader } from "@/components/ui";
 import { getRelease, listTodos, listTracksForRelease } from "@/lib/db";
 import { duration, formatIsrc, money, prettyDate } from "@/lib/format";
-import { RELEASE_STATUSES, RELEASE_TYPES, labelFor, statusTone } from "@/lib/labels";
+import { RELEASE_TYPES, labelFor } from "@/lib/labels";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,7 +40,8 @@ export default async function ReleasePage({
         title={release.title}
         lede={[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no, release.imprint, release.distributor].filter(Boolean).join(" · ")}
       >
-        <Pill tone={statusTone(release.status)}>{labelFor(RELEASE_STATUSES, release.status)}</Pill>
+        <DistributorPick id={release.id} distributor={release.distributor} next={next} />
+        <ReleaseStatus id={release.id} status={release.status} next={next} />
         <Link className="btn" href={`/artists/${release.artist_id}`}>Artist file</Link>
         <Link className="btn" href="/art">3000×3000 art</Link>
       </PageHeader>

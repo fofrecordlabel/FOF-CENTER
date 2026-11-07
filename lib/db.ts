@@ -400,7 +400,7 @@ export async function listReleaseViews() {
   return await many<ReleaseView>(
     `SELECT releases.*, artists.name AS artist_name
      FROM releases JOIN artists ON artists.id = releases.artist_id
-     ORDER BY CASE WHEN releases.release_date IS NULL THEN 1 ELSE 0 END, releases.release_date ASC`
+     ORDER BY releases.title COLLATE NOCASE`
   );
 }
 
@@ -502,7 +502,7 @@ export async function getDossier(id: string): Promise<Dossier | null> {
       ...person,
       relationship: person.artists.find((link) => link.id === id)?.relationship ?? null,
     }));
-  const releaseRows = await many<Release>("SELECT * FROM releases WHERE artist_id = ? ORDER BY release_date IS NULL, release_date DESC, title", id);
+  const releaseRows = await many<Release>("SELECT * FROM releases WHERE artist_id = ? ORDER BY title COLLATE NOCASE", id);
   const releases = [];
   for (const release of releaseRows) {
     releases.push({ ...release, tracks: await listTracksForRelease(release.id) });

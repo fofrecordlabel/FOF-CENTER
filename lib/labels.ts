@@ -66,11 +66,31 @@ export const RELEASE_TYPES: Choice[] = [
 
 export const RELEASE_STATUSES: Choice[] = [
   { value: "idea", label: "Idea" },
+  { value: "unreleased", label: "Unreleased" },
   { value: "production", label: "In production" },
   { value: "delivered", label: "Delivered" },
   { value: "scheduled", label: "Scheduled" },
   { value: "released", label: "Released" },
+  { value: "taken_down", label: "Taken down" },
   { value: "shelved", label: "Shelved" },
+];
+
+export const DISTRIBUTORS: Choice[] = [
+  { value: "DistroKid", label: "DistroKid" },
+  { value: "Symphonic", label: "Symphonic" },
+  { value: "Venice", label: "Venice" },
+  { value: "UnitedMasters", label: "UnitedMasters" },
+  { value: "TuneCore", label: "TuneCore" },
+  { value: "CD Baby", label: "CD Baby" },
+  { value: "AWAL", label: "AWAL" },
+  { value: "ONErpm", label: "ONErpm" },
+  { value: "Too Lost", label: "Too Lost" },
+  { value: "EMPIRE", label: "EMPIRE" },
+  { value: "The Orchard", label: "The Orchard" },
+  { value: "Believe", label: "Believe" },
+  { value: "Ditto", label: "Ditto" },
+  { value: "Amuse", label: "Amuse" },
+  { value: "Stem", label: "Stem" },
 ];
 
 export const STORES: Choice[] = [
@@ -197,7 +217,8 @@ export function priorityTone(priority: string) {
 
 export function statusTone(status: string) {
   if (["executed", "released", "active", "delivered", "closed"].includes(status)) return "good";
+  if (status === "taken_down") return "down";
   if (["negotiating", "signature", "termsheet", "scheduled", "production", "offer", "legal"].includes(status)) return "high";
-  if (["terminated", "expired", "shelved", "killed", "passed", "paused"].includes(status)) return "mute";
+  if (["terminated", "expired", "shelved", "killed", "passed", "paused", "idea", "unreleased"].includes(status)) return "mute";
   return "";
 }

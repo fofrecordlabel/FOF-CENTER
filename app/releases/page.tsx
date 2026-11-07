@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ReleaseForm } from "@/components/RecordForms";
-import { Banner, PageHeader, Pill } from "@/components/ui";
+import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
+import { Banner, Mono, PageHeader } from "@/components/ui";
 import { listArtists, listReleaseViews } from "@/lib/db";
 import { money, prettyDate } from "@/lib/format";
-import { RELEASE_STATUSES, RELEASE_TYPES, labelFor, statusTone } from "@/lib/labels";
+import { RELEASE_STATUSES, RELEASE_TYPES, labelFor } from "@/lib/labels";
 
 export const metadata = { title: "Releases" };
 
@@ -40,11 +41,21 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
             {releases.map((release) => (
               <tr key={release.id}>
                 <td data-label="Release">
-                  <Link className="rowlink" href={`/releases/${release.id}`}>{release.title}</Link>
-                  <div className="meta">{[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no].filter(Boolean).join(" · ")}</div>
+                  <div className="release-cell">
+                    <Mono name={release.title} image={release.cover_url} />
+                    <div>
+                      <Link className="rowlink" href={`/releases/${release.id}`}>{release.title}</Link>
+                      <div className="meta">{[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no].filter(Boolean).join(" · ")}</div>
+                    </div>
+                  </div>
                 </td>
                 <td data-label="Artist"><Link className="rowlink" href={`/artists/${release.artist_id}`}>{release.artist_name}</Link></td>
-                <td data-label="Status"><Pill tone={statusTone(release.status)}>{labelFor(RELEASE_STATUSES, release.status)}</Pill></td>
+                <td data-label="Status">
+                  <div className="release-tools">
+                    <ReleaseStatus id={release.id} status={release.status} next="/releases" />
+                    <DistributorPick id={release.id} distributor={release.distributor} next="/releases" />
+                  </div>
+                </td>
                 <td data-label="Date">{prettyDate(release.release_date)}</td>
                 <td className="num" data-label="Budget">{money(release.budget_cents)}</td>
               </tr>

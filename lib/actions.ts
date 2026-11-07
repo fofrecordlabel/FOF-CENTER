@@ -39,7 +39,7 @@ import { reminderMinutes } from "@/lib/checklist";
 import { POST_SLOTS } from "@/lib/posts";
 import { codesMatch, deskToken } from "@/lib/gate";
 import { today } from "@/lib/format";
-import { CAMPAIGN_STATUSES, CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, EXPENSE_CATEGORIES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, STORES, values } from "@/lib/labels";
+import { CAMPAIGN_STATUSES, CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, DISTRIBUTORS, EXPENSE_CATEGORIES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, STORES, labelFor, values } from "@/lib/labels";
 import { day, dollars, flag, httpUrl, mediaUrl, oneOf, optFloat, optInt, parseDuration, percent, safePath, str } from "@/lib/parse";
 import { forgetMedia } from "@/lib/media";
 import { exec, insert, uid } from "@/lib/sql";
@@ -210,6 +210,31 @@ export async function updateRelease(formData: FormData) {
     await writeRow("releases", release.id, releaseFields(formData, artistId, title));
     await touchArtist(artistId);
     await logActivity(artistId, "Release", `${title} updated.`);
+  });
+}
+
+export async function setReleaseStatus(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), "/catalog");
+  const release = id ? await getRelease(id) : null;
+  const status = oneOf(str(formData, "status", 40), values(RELEASE_STATUSES), "");
+  if (!release || !status) go(next, "That release is not on file.");
+  await run(next, async () => {
+    await writeRow("releases", release.id, { status });
+    await logActivity(release.artist_id, "Release", `${release.title} marked ${labelFor(RELEASE_STATUSES, status)}.`);
+  });
+}
+
+export async function setReleaseDistributor(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), "/catalog");
+  const release = id ? await getRelease(id) : null;
+  if (!release) go(next, "That release is not on file.");
+  const raw = str(formData, "distributor", 120);
+  if (raw === "__add") go(next);
+  await run(next, async () => {
+    await writeRow("releases", release.id, { distributor: raw });
+    await logActivity(release.artist_id, "Release", raw ? `${release.title} distributor set to ${raw}.` : `${release.title} distributor cleared.`);
   });
 }
 
@@ -1006,6 +1031,14 @@ function contractFields(formData: FormData, artistId: string, title: string) {
   };
 }
 
+function distributorName(formData: FormData) {
+  const custom = str(formData, "distributor_custom", 120);
+  const picked = str(formData, "distributor", 120);
+  if (custom) return custom;
+  if (!picked || picked === "__add") return null;
+  return picked;
+}
+
 function releaseFields(formData: FormData, artistId: string, title: string) {
   return {
     artist_id: artistId,
@@ -1016,7 +1049,7 @@ function releaseFields(formData: FormData, artistId: string, title: string) {
     upc: str(formData, "upc", 40),
     catalog_no: str(formData, "catalog_no", 40),
     imprint: str(formData, "imprint", 120) ?? "FOF Records",
-    distributor: str(formData, "distributor", 120),
+    distributor: distributorName(formData),
     cover_url: mediaUrl(str(formData, "cover_url", 400)),
     budget_cents: dollars(formData, "budget"),
     notes: str(formData, "notes", 4000),

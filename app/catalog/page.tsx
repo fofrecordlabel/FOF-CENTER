@@ -2,13 +2,14 @@ import Link from "next/link";
 import { deleteRoyalty, deleteTrack } from "@/lib/actions";
 import { ConfirmSubmit } from "@/components/controls";
 import { CampaignBlock, DeliveryChecks, SplitList } from "@/components/ReleaseOps";
+import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
 import { CoverUpload, MasterAudio } from "@/components/SongMedia";
 import { RegistrationMarks, TakedownControls } from "@/components/TrackOps";
 import { RoyaltyForm, TrackForm } from "@/components/RecordForms";
-import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
+import { Balance, Banner, Mono, PageHeader } from "@/components/ui";
 import { listArtists, listBookings, listCampaigns, listInfluencers, listReleaseViews, listRoyaltyViews, listSplits, listTakedowns, listTrackViews, rosterRows } from "@/lib/db";
 import { duration, formatIsrc, initials, money, prettyDate } from "@/lib/format";
-import { RELEASE_STATUSES, RELEASE_TYPES, ROYALTY_SOURCES, STORES, labelFor, statusTone } from "@/lib/labels";
+import { RELEASE_TYPES, ROYALTY_SOURCES, STORES, labelFor } from "@/lib/labels";
 
 export const metadata = { title: "Catalog" };
 
@@ -125,7 +126,10 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                         .join(" · ")}
                     </p>
                   </div>
-                  <Pill tone={statusTone(release.status)}>{labelFor(RELEASE_STATUSES, release.status)}</Pill>
+                  <div className="release-tools">
+                    <DistributorPick id={release.id} distributor={release.distributor} next="/catalog" />
+                    <ReleaseStatus id={release.id} status={release.status} next="/catalog" />
+                  </div>
                 </div>
 
                 <DeliveryChecks release={release} masters={masters} />
