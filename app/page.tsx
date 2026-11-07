@@ -27,6 +27,11 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
   const releases = (await listReleaseViews()).map((release) => ({ id: release.id, title: release.title }));
   const todayChecks = dayStats(todos.filter((todo) => todo.todo_date === today()));
   const listenerTotal = artists.reduce((sum, artist) => sum + (artist.monthly_listeners ?? 0), 0);
+  const listenerMove = listenerLogs
+    .slice()
+    .sort((a, b) => a.log_date.localeCompare(b.log_date) || a.created_at.localeCompare(b.created_at))
+    .slice(-2)
+    .reduce((move, log, index, pair) => (index === 0 ? move : log.listeners - pair[0].listeners), 0);
   const hasListeners = artists.some((artist) => artist.monthly_listeners != null);
   const duePosts = logs.filter((entry) => entry.status === "planned" && entry.kind === "post" && entry.log_date <= today());
   const postedSlots = new Set((await listPostChecks(today())).map((row) => row.slot_time));
@@ -55,19 +60,24 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
       <Banner message={error} />
 
       <section className="glance" aria-label="Desk at a glance">
-        <a className="glance-card" href="#listeners">
+        <a className={`glance-card ${listenerMove < 0 ? "drop" : listenerMove > 0 ? "gain" : ""}`} href="#listeners">
           <b>{hasListeners ? compact(listenerTotal) : "—"}</b>
           <span>Monthly listeners</span>
         </a>
-        <Link className="glance-card" href="/checklist">
+        <Link className={`glance-card ${todayChecks.total > 0 && todayChecks.done === todayChecks.total ? "gain" : ""}`} href="/checklist">
           <b>{todayChecks.total ? `${todayChecks.done}/${todayChecks.total}` : "—"}</b>
+          <span className="pips" aria-hidden>
+            {Array.from({ length: 7 }, (_, index) => (
+              <i key={index} className={index < (todayChecks.total ? Math.round((todayChecks.done / todayChecks.total) * 7) : 0) ? "on" : undefined} />
+            ))}
+          </span>
           <span>Checklist today</span>
         </Link>
-        <a className="glance-card" href="#today">
+        <a className={`glance-card ${duePosts.length + openPostTimes > 0 ? "hot" : ""}`} href="#today">
           <b>{duePosts.length + openPostTimes}</b>
           <span>Posts due</span>
         </a>
-        <Link className="glance-card" href="/log">
+        <Link className={`glance-card ${todayCount > 0 ? "gain" : ""}`} href="/log">
           <b>{todayCount}</b>
           <span>Logged today</span>
         </Link>
@@ -105,7 +115,7 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
           <span>Offer or legal</span>
         </Link>
         <Link className="stat" href="/catalog">
-          <b className={desk.unrecouped > 0 ? "hot-text" : "good-text"}>{money(desk.unrecouped)}</b>
+          <b>{money(desk.unrecouped)}</b>
           <span>Unrecouped</span>
         </Link>
         <Link className="stat" href="/catalog">

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ReleaseForm } from "@/components/RecordForms";
+import { ReleasePlay } from "@/components/ReleasePlay";
 import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
 import { Banner, Mono, PageHeader } from "@/components/ui";
-import { listArtists, listReleaseViews } from "@/lib/db";
+import { listArtists, listReleaseMasters, listReleaseViews } from "@/lib/db";
 import { money, prettyDate } from "@/lib/format";
 import { RELEASE_STATUSES, RELEASE_TYPES, labelFor, statusTone } from "@/lib/labels";
 
@@ -12,6 +13,12 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
   const { status, error } = await searchParams;
   const current = RELEASE_STATUSES.some((item) => item.value === status) ? status : "all";
   const releases = (await listReleaseViews()).filter((release) => current === "all" || release.status === current);
+  const masters = new Map<string, { title: string; src: string }[]>();
+  for (const master of await listReleaseMasters()) {
+    const list = masters.get(master.release_id) ?? [];
+    list.push({ title: master.title, src: master.audio_url });
+    masters.set(master.release_id, list);
+  }
   const artists = (await listArtists()).map((artist) => ({ id: artist.id, name: artist.name }));
 
   return (
@@ -42,11 +49,18 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
               <tr className={statusTone(release.status)} key={release.id}>
                 <td data-label="Release">
                   <div className="release-cell">
-                    <Mono name={release.title} image={release.cover_url} />
-                    <div>
-                      <Link className="rowlink" href={`/releases/${release.id}`}>{release.title}</Link>
-                      <div className="meta">{[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no].filter(Boolean).join(" · ")}</div>
-                    </div>
+                    <Link className="release-open" href={`/releases/${release.id}`} aria-label={`Open ${release.title}`}>
+                      <span className={`cover-ring ${statusTone(release.status)}`}>
+                        <Mono name={release.title} image={release.cover_url} />
+                      </span>
+                    </Link>
+                    {masters.get(release.id)?.length ? (
+                      <ReleasePlay releaseId={release.id} title={release.title} tracks={masters.get(release.id) ?? []} />
+                    ) : null}
+                    <Link className="release-open release-name" href={`/releases/${release.id}`}>
+                      <span className="rowlink">{release.title}</span>
+                      <span className="meta">{[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no].filter(Boolean).join(" · ")}</span>
+                    </Link>
                   </div>
                 </td>
                 <td data-label="Artist"><Link className="rowlink" href={`/artists/${release.artist_id}`}>{release.artist_name}</Link></td>

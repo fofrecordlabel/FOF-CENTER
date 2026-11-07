@@ -417,6 +417,16 @@ export async function listTracksForRelease(releaseId: string) {
   return await many<Track>("SELECT * FROM tracks WHERE release_id = ? ORDER BY track_number, title COLLATE NOCASE", releaseId);
 }
 
+export async function listReleaseMasters() {
+  return await many<{ release_id: string; title: string; audio_url: string }>(
+    `SELECT tracks.release_id, tracks.title, tracks.audio_url
+     FROM tracks
+     JOIN files ON tracks.audio_url = '/media/' || files.id::text
+     WHERE tracks.release_id IS NOT NULL
+     ORDER BY tracks.track_number, tracks.title COLLATE NOCASE`
+  );
+}
+
 export async function listTrackViews() {
   return await many<TrackView>(
     `SELECT tracks.*, artists.name AS artist_name, releases.title AS release_title

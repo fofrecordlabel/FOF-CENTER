@@ -8,6 +8,13 @@ import { DeskAlerts } from "./DeskAlerts";
 import { SavedNotice } from "./SavedNotice";
 import type { DeskAlert } from "@/lib/alerts";
 
+function tabDot(href: string, alerts: { id: string; href: string }[]) {
+  if (href === "/") return alerts.some((alert) => alert.id.startsWith("post-") || alert.href === "/week");
+  if (href === "/checklist") return alerts.some((alert) => alert.href === "/checklist");
+  if (href === "/#listeners") return alerts.some((alert) => alert.href.includes("listeners"));
+  return false;
+}
+
 const TABS = [
   { href: "/", label: "Desk" },
   { href: "/checklist", label: "Checklist" },
@@ -103,6 +110,7 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
         {TABS.map((item) => (
           <Link key={item.href} href={item.href} className={tabActive(item.href) ? "active" : undefined}>
             {item.label}
+            {tabDot(item.href, alerts) ? <i className="tab-dot" aria-label="Waiting" /> : null}
           </Link>
         ))}
       </nav>

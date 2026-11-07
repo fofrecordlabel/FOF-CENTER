@@ -103,7 +103,7 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
       <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={active ? `${count(active.listeners)} monthly listeners on ${prettyDate(active.log_date)}` : "Listener chart, empty"}>
         {ticksSafe(scale).map((tick) => (
           <g key={tick}>
-            <line x1={PAD_L} x2={W - PAD_R} y1={yOf(tick)} y2={yOf(tick)} stroke="#1c1c1c" strokeWidth="1" />
+            <line x1={PAD_L} x2={W - PAD_R} y1={yOf(tick)} y2={yOf(tick)} stroke={tick === 100_000 ? "#ffffff" : "#1c1c1c"} strokeWidth={tick === 100_000 ? 1.5 : 1} />
             <text x={PAD_L - 10} y={yOf(tick) + 4} fill="#737373" fontSize="11" textAnchor="end">
               {compact(tick)}
             </text>
@@ -122,10 +122,9 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
               y1={y1}
               x2={x2}
               y2={y2}
-              stroke="#ffffff"
+              stroke={item.kind === "drop" ? "#ff4d4d" : item.kind === "spike" ? "#3ddc84" : "#ffffff"}
               strokeWidth={item.kind === "flat" ? 1.5 : 2.75}
               strokeLinecap="round"
-              strokeDasharray={item.kind === "drop" ? "7 6" : undefined}
               opacity={item.kind === "flat" ? 0.45 : 1}
             />
           );
@@ -135,7 +134,7 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
           const y = (yOf(item.from.listeners) + yOf(item.to.listeners)) / 2;
           const below = item.kind === "drop";
           return (
-            <text key={`label-${item.to.id}`} x={x} y={below ? y + 18 : y - 12} fill={item.kind === "drop" ? "#a3a3a3" : "#ffffff"} fontSize="13" fontStyle="italic" textAnchor="middle">
+            <text key={`label-${item.to.id}`} x={x} y={below ? y + 18 : y - 12} fill={item.kind === "drop" ? "#ff4d4d" : item.kind === "spike" ? "#3ddc84" : "#ffffff"} fontSize="13" fontStyle="italic" textAnchor="middle">
               {item.kind === "drop" ? "−" : item.kind === "spike" ? "+" : ""}
               {item.kind === "flat" ? "Flat" : count(Math.abs(item.delta))}
             </text>

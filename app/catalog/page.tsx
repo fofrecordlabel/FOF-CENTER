@@ -146,7 +146,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   </div>
                   {masters.length === 0 ? <p className="meta">No masters on this cover yet.</p> : null}
                   {masters.map((track) => (
-                    <div className="master-line" id={`trk-${track.id}`} key={track.id}>
+                    <div className={track.audio_url ? "master-line" : "master-line missing"} id={`trk-${track.id}`} key={track.id}>
                       <div>
                         <strong>
                           {track.track_number ? `${track.track_number}. ` : ""}
@@ -228,7 +228,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         <section className="section card stack">
           <h2>Not on a cover yet</h2>
           {looseTracks.map((track) => (
-            <div className="master-line" id={`trk-${track.id}`} key={track.id}>
+            <div className={track.audio_url ? "master-line" : "master-line missing"} id={`trk-${track.id}`} key={track.id}>
               <div>
                 <strong>{track.title}</strong>
                 <p className="meta">

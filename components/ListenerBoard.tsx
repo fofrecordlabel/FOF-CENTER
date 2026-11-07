@@ -52,8 +52,9 @@ export function ListenerBoard({
           <span>{left > 0 ? `${count(left)} to 100K` : left === 0 ? "100K" : `${count(Math.abs(left))} past 100K`}</span>
           <span>{pct.toFixed(pct < 10 && pct > 0 ? 1 : 0)}%</span>
         </div>
-        <div className="goal-bar" aria-hidden>
+        <div className={`goal-bar ${move?.kind ?? ""}`} aria-hidden>
           <span style={{ width: `${pct}%` }} />
+          <i className="goal-mark" />
         </div>
       </div>
 
