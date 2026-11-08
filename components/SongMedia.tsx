@@ -7,6 +7,9 @@ const CHUNK = 480 * 1024;
 
 export function CoverUpload({ releaseId }: { releaseId: string }) {
   const [status, setStatus] = useState("");
+  const [progress, setProgress] = useState<number | null>(null);
+
+  if (progress !== null) return <UploadMeter percent={progress} />;
 
   return (
     <label className="btn small file-btn">
@@ -18,7 +21,7 @@ export function CoverUpload({ releaseId }: { releaseId: string }) {
           const file = event.currentTarget.files?.[0];
           event.currentTarget.value = "";
           if (!file) return;
-          void saveCover(file, releaseId, setStatus);
+          void saveCover(file, releaseId, setStatus, setProgress);
         }}
       />
     </label>
@@ -27,33 +30,53 @@ export function CoverUpload({ releaseId }: { releaseId: string }) {
 
 export function MasterAudio({ trackId, src }: { trackId: string; src: string | null }) {
   const [status, setStatus] = useState("");
+  const [progress, setProgress] = useState<number | null>(null);
   const [localSrc, setLocalSrc] = useState(src);
 
   return (
     <div className="master-audio">
       {localSrc ? <audio className="master-player" controls preload="metadata" src={localSrc} /> : <p className="meta">No master audio yet.</p>}
-      <label className="btn small file-btn">
-        {status || (localSrc ? "Replace the master" : "Add the master")}
-        <input
-          type="file"
-          accept=".wav,.wave,.mp3,audio/wav,audio/x-wav,audio/wave,audio/vnd.wave,audio/mpeg,audio/mp3,*/*"
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
-            event.currentTarget.value = "";
-            if (!file) return;
-            void saveAudio(file, trackId, setStatus, setLocalSrc);
-          }}
-        />
-      </label>
+      {progress !== null ? (
+        <UploadMeter percent={progress} />
+      ) : (
+        <label className="btn small file-btn">
+          {status || (localSrc ? "Replace the master" : "Add the master")}
+          <input
+            type="file"
+            accept=".wav,.wave,.mp3,audio/wav,audio/x-wav,audio/wave,audio/vnd.wave,audio/mpeg,audio/mp3,*/*"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              if (!file) return;
+              void saveAudio(file, trackId, setStatus, setProgress, setLocalSrc);
+            }}
+          />
+        </label>
+      )}
     </div>
   );
 }
 
-export async function uploadFile(file: Blob, fields: { kind: "cover" | "audio"; releaseId?: string; trackId?: string; mime: string; name: string }, onProgress?: (text: string) => void) {
+function UploadMeter({ percent }: { percent: number }) {
+  return (
+    <span className="upload-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={`Uploading ${percent}%`}>
+      <span className="upload-spin" aria-hidden="true" />
+      <span className="upload-track" aria-hidden="true">
+        <i style={{ width: `${percent}%` }} />
+      </span>
+      <b>{percent}%</b>
+    </span>
+  );
+}
+
+export async function uploadFile(file: Blob, fields: { kind: "cover" | "audio"; releaseId?: string; trackId?: string; mime: string; name: string }, onProgress?: (percent: number) => void) {
   const id = crypto.randomUUID();
   const total = Math.max(1, Math.ceil(file.size / CHUNK));
+  let sent = 0;
   for (let part = 0; part < total; part += 1) {
-    onProgress?.(`Saving ${part + 1} of ${total}`);
+    const start = part * CHUNK;
+    const slice = file.slice(start, Math.min(file.size, start + CHUNK));
+    onProgress?.(file.size ? Math.min(99, Math.round((sent / file.size) * 100)) : 0);
     const body = new FormData();
     body.set("id", id);
     body.set("part", String(part));
@@ -63,40 +86,73 @@ export async function uploadFile(file: Blob, fields: { kind: "cover" | "audio"; 
     body.set("name", fields.name);
     if (fields.releaseId) body.set("release_id", fields.releaseId);
     if (fields.trackId) body.set("track_id", fields.trackId);
-    body.set("file", file.slice(part * CHUNK, (part + 1) * CHUNK), fields.name);
-    const response = await fetch("/api/media", { method: "POST", body });
-    const payload = (await response.json().catch(() => null)) as { error?: string; done?: boolean; url?: string } | null;
-    if (!response.ok) throw new Error(payload?.error || "Could not save that file.");
+    body.set("file", slice, fields.name);
+    const payload = await postChunk(body, (loaded) => {
+      const within = Math.min(slice.size, loaded);
+      onProgress?.(file.size ? Math.min(99, Math.round(((sent + within) / file.size) * 100)) : 0);
+    });
     if (part === total - 1) {
       if (!payload?.done) throw new Error("The file did not finish saving.");
+      onProgress?.(100);
       return typeof payload.url === "string" ? payload.url : "";
     }
+    sent += slice.size;
+    onProgress?.(file.size ? Math.round((sent / file.size) * 100) : 100);
   }
   return "";
 }
 
-async function saveCover(file: File, releaseId: string, setStatus: (value: string) => void) {
+function postChunk(body: FormData, onLoaded: (bytes: number) => void) {
+  return new Promise<{ error?: string; done?: boolean; url?: string }>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/media");
+    xhr.responseType = "json";
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onLoaded(event.loaded);
+    };
+    xhr.onload = () => {
+      const payload = xhr.response && typeof xhr.response === "object" ? (xhr.response as { error?: string; done?: boolean; url?: string }) : null;
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(payload?.error || "Could not save that file."));
+        return;
+      }
+      resolve(payload ?? {});
+    };
+    xhr.onerror = () => reject(new Error("Could not save that file."));
+    xhr.send(body);
+  });
+}
+
+async function saveCover(file: File, releaseId: string, setStatus: (value: string) => void, setProgress: (value: number | null) => void) {
   try {
     setStatus("Making 3000×3000…");
     const blob = await squareCover(file);
-    await uploadFile(blob, { kind: "cover", releaseId, mime: "image/jpeg", name: `${file.name.replace(/\.[^.]+$/, "") || "cover"}.jpg` }, setStatus);
+    setStatus("");
+    setProgress(0);
+    await uploadFile(blob, { kind: "cover", releaseId, mime: "image/jpeg", name: `${file.name.replace(/\.[^.]+$/, "") || "cover"}.jpg` }, setProgress);
+    setProgress(null);
     setStatus("Saved.");
   } catch (error) {
+    setProgress(null);
     setStatus(error instanceof Error ? error.message : "Could not save that cover.");
   }
 }
 
-async function saveAudio(file: File, trackId: string, setStatus: (value: string) => void, setLocalSrc: (value: string) => void) {
+async function saveAudio(file: File, trackId: string, setStatus: (value: string) => void, setProgress: (value: number | null) => void, setLocalSrc: (value: string) => void) {
   try {
     const mime = await audioMime(file);
     if (mime !== "audio/wav" && mime !== "audio/mpeg") {
       setStatus("Use a WAV or MP3.");
       return;
     }
-    const url = await uploadFile(file, { kind: "audio", trackId, mime, name: file.name || (mime === "audio/wav" ? "master.wav" : "master.mp3") }, setStatus);
+    setStatus("");
+    setProgress(0);
+    const url = await uploadFile(file, { kind: "audio", trackId, mime, name: file.name || (mime === "audio/wav" ? "master.wav" : "master.mp3") }, setProgress);
+    setProgress(null);
     if (url) setLocalSrc(url);
     setStatus("Saved.");
   } catch (error) {
+    setProgress(null);
     setStatus(error instanceof Error ? error.message : "Could not save that master.");
   }
 }

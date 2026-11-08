@@ -254,6 +254,21 @@ a.rowlink:hover { color: #ffffff; }
 }
 .master-player { width: 100%; margin: 8px 0; }
 .master-audio { display: grid; justify-items: start; gap: 8px; }
+.upload-meter {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 44px; min-width: 180px; color: var(--ivory);
+}
+.upload-spin {
+  width: 16px; height: 16px; flex: none; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25); border-top-color: #ffffff;
+  animation: upload-spin 0.7s linear infinite;
+}
+.upload-track { flex: 1; height: 4px; min-width: 72px; background: #1a1a1a; border-radius: 999px; overflow: hidden; }
+.upload-track i { display: block; height: 100%; background: #ffffff; }
+.upload-meter b { font-variant-numeric: tabular-nums; font-size: 13px; min-width: 3.2ch; }
+@keyframes upload-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .upload-spin { animation: none; }
+}
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   border-radius: 12px; padding: 9px 14px; min-height: 44px; border: 1px solid var(--line-strong);
