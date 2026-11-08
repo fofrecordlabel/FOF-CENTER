@@ -418,10 +418,11 @@ export async function listTracksForRelease(releaseId: string) {
 }
 
 export async function listReleaseMasters() {
-  return await many<{ release_id: string; title: string; audio_url: string }>(
-    `SELECT tracks.release_id, tracks.title, tracks.audio_url
+  return await many<{ release_id: string; id: string; title: string; audio_url: string | null }>(
+    `SELECT tracks.release_id, tracks.id, tracks.title,
+       CASE WHEN files.id IS NOT NULL THEN tracks.audio_url ELSE NULL END AS audio_url
      FROM tracks
-     JOIN files ON tracks.audio_url = '/media/' || files.id::text
+     LEFT JOIN files ON tracks.audio_url = '/media/' || files.id::text
      WHERE tracks.release_id IS NOT NULL
      ORDER BY tracks.track_number, tracks.title COLLATE NOCASE`
   );

@@ -247,11 +247,17 @@ a.rowlink:hover { color: #ffffff; }
 .drop { display: grid; gap: 8px; }
 @media (max-width: 860px) { .art-stage { grid-template-columns: 1fr; } }
 
-.file-btn { position: relative; cursor: pointer; }
-.file-btn input[type="file"] {
-  position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0;
-  border: 0; opacity: 0; cursor: pointer; font-size: 16px;
+.file-btn, .add-master { position: relative; cursor: pointer; }
+.file-btn input[type="file"], .add-master input[type="file"] {
+  position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; min-height: 44px; margin: 0; padding: 0;
+  border: 0; opacity: 0.02; cursor: pointer; font-size: 16px;
 }
+.add-master {
+  width: 44px; height: 44px; border-radius: 50%; border: 1px dashed rgba(255, 255, 255, 0.72);
+  background: #000000; color: #ffffff; display: grid; place-items: center; padding: 0;
+}
+.add-master svg { width: 16px; height: 16px; display: block; }
+.add-master b { font-size: 11px; font-variant-numeric: tabular-nums; }
 .master-player { width: 100%; margin: 8px 0; }
 .master-audio { display: grid; justify-items: start; gap: 8px; }
 .upload-meter {

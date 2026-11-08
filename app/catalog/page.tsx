@@ -3,7 +3,7 @@ import { deleteRoyalty, deleteTrack } from "@/lib/actions";
 import { ConfirmSubmit } from "@/components/controls";
 import { CampaignBlock, DeliveryChecks, SplitList } from "@/components/ReleaseOps";
 import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
-import { CoverUpload, MasterAudio } from "@/components/SongMedia";
+import { CoverUpload, MasterAdd, MasterAudio } from "@/components/SongMedia";
 import { RegistrationMarks, TakedownControls } from "@/components/TrackOps";
 import { RoyaltyForm, TrackForm } from "@/components/RecordForms";
 import { Balance, Banner, Mono, PageHeader } from "@/components/ui";
@@ -144,7 +144,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                     <h3>Masters</h3>
                     <span className="meta">{masters.length}</span>
                   </div>
-                  {masters.length === 0 ? <p className="meta">No masters on this cover yet.</p> : null}
+                  {masters.length === 0 ? <MasterAdd releaseId={release.id} title={release.title} /> : null}
                   {masters.map((track) => (
                     <div className={track.audio_url ? "master-line" : "master-line missing"} id={`trk-${track.id}`} key={track.id}>
                       <div>

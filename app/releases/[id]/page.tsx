@@ -5,7 +5,7 @@ import { ChecklistLine } from "@/components/Checklist";
 import { ConfirmSubmit } from "@/components/controls";
 import { ReleaseForm, TrackForm } from "@/components/RecordForms";
 import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
-import { CoverUpload, MasterAudio } from "@/components/SongMedia";
+import { CoverUpload, MasterAdd, MasterAudio } from "@/components/SongMedia";
 import { Banner, Mono, PageHeader } from "@/components/ui";
 import { getRelease, listTodos, listTracksForRelease } from "@/lib/db";
 import { duration, formatIsrc, money, prettyDate } from "@/lib/format";
@@ -59,6 +59,7 @@ export default async function ReleasePage({
       {release.notes ? <p className="lede">{release.notes}</p> : null}
       <section className="section stack">
         <h2>Masters</h2>
+        {tracks.length === 0 ? <MasterAdd releaseId={release.id} title={release.title} /> : null}
         {tracks.map((track) => (
           <article className="card" key={track.id}>
             <div className="track">

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { ReleasePlay } from "@/components/ReleasePlay";
 
 const SIZE = 3000;
 const CHUNK = 480 * 1024;
+const AUDIO_ACCEPT = ".mp3,audio/mpeg,.wav,.wave,audio/wav,audio/x-wav,audio/*";
 
 export function CoverUpload({ releaseId }: { releaseId: string }) {
   const [status, setStatus] = useState("");
@@ -40,20 +42,69 @@ export function MasterAudio({ trackId, src }: { trackId: string; src: string | n
         <UploadMeter percent={progress} />
       ) : (
         <label className="btn small file-btn">
-          {status || (localSrc ? "Replace the master" : "Add the master")}
-          <input
-            type="file"
-            accept=".wav,.wave,.mp3,audio/wav,audio/x-wav,audio/wave,audio/vnd.wave,audio/mpeg,audio/mp3,*/*"
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0];
-              event.currentTarget.value = "";
-              if (!file) return;
-              void saveAudio(file, trackId, setStatus, setProgress, setLocalSrc);
+          {status || (localSrc ? "Replace the master" : "Add MP3 or WAV")}
+          <AudioInput
+            onFile={(file) => {
+              void saveAudio(file, { trackId }, setStatus, setProgress, setLocalSrc);
             }}
           />
         </label>
       )}
     </div>
+  );
+}
+
+export function MasterAdd({ releaseId, trackId, title, compact = false }: { releaseId: string; trackId?: string | null; title: string; compact?: boolean }) {
+  const [status, setStatus] = useState("");
+  const [progress, setProgress] = useState<number | null>(null);
+  const [src, setSrc] = useState("");
+
+  if (src) return <ReleasePlay releaseId={releaseId} title={title} tracks={[{ title, src }]} />;
+  if (!compact && progress !== null) return <UploadMeter percent={progress} />;
+
+  const problem = status && progress === null ? status : "";
+  const label = problem || (compact ? `Add the MP3 or WAV for ${title}` : "Add MP3 or WAV");
+  const control = (
+    <label className={compact ? "add-master" : "btn small file-btn"} aria-label={label} title={problem || "An MP3 is easier than a WAV."}>
+      {compact ? progress !== null ? <b>{progress}%</b> : <PlusIcon /> : problem || "Add MP3 or WAV"}
+      {progress === null ? (
+        <AudioInput
+          onFile={(file) => {
+            void saveAudio(file, { releaseId, trackId: trackId ?? undefined }, setStatus, setProgress, setSrc);
+          }}
+        />
+      ) : null}
+    </label>
+  );
+  if (!compact) return control;
+  return (
+    <div className="release-play">
+      {control}
+      {problem ? <span className="meta">{problem}</span> : null}
+    </div>
+  );
+}
+
+function AudioInput({ onFile }: { onFile: (file: File) => void }) {
+  return (
+    <input
+      type="file"
+      accept={AUDIO_ACCEPT}
+      onChange={(event) => {
+        const file = event.currentTarget.files?.[0];
+        event.currentTarget.value = "";
+        if (!file) return;
+        onFile(file);
+      }}
+    />
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M7 2h2v12H7zM2 7h12v2H2z" fill="currentColor" />
+    </svg>
   );
 }
 
@@ -106,12 +157,11 @@ function postChunk(body: FormData, onLoaded: (bytes: number) => void) {
   return new Promise<{ error?: string; done?: boolean; url?: string }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/media");
-    xhr.responseType = "json";
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) onLoaded(event.loaded);
     };
     xhr.onload = () => {
-      const payload = xhr.response && typeof xhr.response === "object" ? (xhr.response as { error?: string; done?: boolean; url?: string }) : null;
+      const payload = readPayload(xhr);
       if (xhr.status < 200 || xhr.status >= 300) {
         reject(new Error(payload?.error || "Could not save that file."));
         return;
@@ -121,6 +171,16 @@ function postChunk(body: FormData, onLoaded: (bytes: number) => void) {
     xhr.onerror = () => reject(new Error("Could not save that file."));
     xhr.send(body);
   });
+}
+
+function readPayload(xhr: XMLHttpRequest) {
+  const raw = xhr.response;
+  if (raw && typeof raw === "object") return raw as { error?: string; done?: boolean; url?: string };
+  try {
+    return JSON.parse(String(xhr.responseText || "")) as { error?: string; done?: boolean; url?: string };
+  } catch {
+    return null;
+  }
 }
 
 async function saveCover(file: File, releaseId: string, setStatus: (value: string) => void, setProgress: (value: number | null) => void) {
@@ -138,16 +198,20 @@ async function saveCover(file: File, releaseId: string, setStatus: (value: strin
   }
 }
 
-async function saveAudio(file: File, trackId: string, setStatus: (value: string) => void, setProgress: (value: number | null) => void, setLocalSrc: (value: string) => void) {
+async function saveAudio(file: File, target: { trackId?: string; releaseId?: string }, setStatus: (value: string) => void, setProgress: (value: number | null) => void, setLocalSrc: (value: string) => void) {
   try {
     const mime = await audioMime(file);
     if (mime !== "audio/wav" && mime !== "audio/mpeg") {
-      setStatus("Use a WAV or MP3.");
+      setStatus("Use an MP3 or WAV. An MP3 is easier.");
       return;
     }
     setStatus("");
     setProgress(0);
-    const url = await uploadFile(file, { kind: "audio", trackId, mime, name: file.name || (mime === "audio/wav" ? "master.wav" : "master.mp3") }, setProgress);
+    const url = await uploadFile(
+      file,
+      { kind: "audio", trackId: target.trackId, releaseId: target.releaseId, mime, name: file.name || (mime === "audio/mpeg" ? "master.mp3" : "master.wav") },
+      setProgress
+    );
     setProgress(null);
     if (url) setLocalSrc(url);
     setStatus("Saved.");

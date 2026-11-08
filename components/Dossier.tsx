@@ -4,7 +4,7 @@ import { ConfirmSubmit, StageSelect } from "@/components/controls";
 import { DealForm, NoteForm, ProjectForm, ReleaseForm, RoyaltyForm, TeamForm, TrackForm } from "@/components/RecordForms";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
 import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
-import { CoverUpload, MasterAudio } from "@/components/SongMedia";
+import { CoverUpload, MasterAdd, MasterAudio } from "@/components/SongMedia";
 import { Balance, BudgetBar, Mono, Pill } from "@/components/ui";
 import { ago, compact, duration, formatIsrc, money, prettyDate, rate, socialUrl, term } from "@/lib/format";
 import { DEAL_STATUSES, DEAL_TYPES, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, STAGES, isRoster, labelFor, priorityTone, stageTone, statusTone } from "@/lib/labels";
@@ -190,6 +190,7 @@ export function DossierView({ file, listeners = [], marks = [] }: { file: Dossie
               </div>
             </div>
             <CoverUpload releaseId={release.id} />
+            {release.tracks.length === 0 ? <MasterAdd releaseId={release.id} title={release.title} /> : null}
             {release.tracks.map((track) => (
               <div className="track" key={track.id}>
                 <strong>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ReleaseForm } from "@/components/RecordForms";
 import { ReleasePlay } from "@/components/ReleasePlay";
+import { MasterAdd } from "@/components/SongMedia";
 import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
 import { Banner, Mono, PageHeader } from "@/components/ui";
 import { listArtists, listReleaseMasters, listReleaseViews } from "@/lib/db";
@@ -14,10 +15,15 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
   const current = RELEASE_STATUSES.some((item) => item.value === status) ? status : "all";
   const releases = (await listReleaseViews()).filter((release) => current === "all" || release.status === current);
   const masters = new Map<string, { title: string; src: string }[]>();
+  const openTrack = new Map<string, string>();
   for (const master of await listReleaseMasters()) {
-    const list = masters.get(master.release_id) ?? [];
-    list.push({ title: master.title, src: master.audio_url });
-    masters.set(master.release_id, list);
+    if (master.audio_url) {
+      const list = masters.get(master.release_id) ?? [];
+      list.push({ title: master.title, src: master.audio_url });
+      masters.set(master.release_id, list);
+    } else if (!openTrack.has(master.release_id)) {
+      openTrack.set(master.release_id, master.id);
+    }
   }
   const artists = (await listArtists()).map((artist) => ({ id: artist.id, name: artist.name }));
 
@@ -56,7 +62,9 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
                     </Link>
                     {masters.get(release.id)?.length ? (
                       <ReleasePlay releaseId={release.id} title={release.title} tracks={masters.get(release.id) ?? []} />
-                    ) : null}
+                    ) : (
+                      <MasterAdd releaseId={release.id} trackId={openTrack.get(release.id)} title={release.title} compact />
+                    )}
                     <Link className="release-open release-name" href={`/releases/${release.id}`}>
                       <span className="rowlink">{release.title}</span>
                       <span className="meta">{[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no].filter(Boolean).join(" · ")}</span>

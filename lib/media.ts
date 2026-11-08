@@ -55,8 +55,8 @@ export async function storePart(input: {
     if (input.mime !== "image/jpeg") throw new Error("A cover has to be a JPEG.");
     if (!input.releaseId) throw new Error("Pick the song for this cover.");
   } else if (!audioMime) {
-    throw new Error("Use a WAV or MP3.");
-  } else if (!input.trackId) {
+    throw new Error("Use an MP3 or WAV.");
+  } else if (!input.trackId && !input.releaseId) {
     throw new Error("Pick the song for this master.");
   }
 
@@ -88,7 +88,7 @@ export async function storePart(input: {
       await exec("DELETE FROM files WHERE id = ?", input.id);
       throw new Error("That master is over 250 MB.");
     }
-    await attachAudio(input.trackId!, input.id, audioMime!);
+    await attachAudio(await resolveTrack(input.trackId, input.releaseId), input.id, audioMime!);
   }
   return { done: true as const, url: `/media/${input.id}` };
 }
@@ -106,6 +106,35 @@ async function attachCover(releaseId: string, id: string, bytes: Buffer, name: s
     `${release.title} cover saved at 3000×3000.`,
     new Date().toISOString(),
   ]);
+}
+
+async function resolveTrack(trackId: string | null, releaseId: string | null) {
+  if (trackId) {
+    const rows = await query<{ id: string }>("SELECT id FROM tracks WHERE id = ?", [trackId]);
+    if (!rows[0]) throw new Error("That song is not on file.");
+    return trackId;
+  }
+  if (!releaseId) throw new Error("Pick the song for this master.");
+  const open = await query<{ id: string }>(
+    `SELECT tracks.id
+     FROM tracks
+     LEFT JOIN files ON tracks.audio_url = '/media/' || files.id::text
+     WHERE tracks.release_id = ? AND files.id IS NULL
+     ORDER BY tracks.track_number, tracks.title COLLATE NOCASE
+     LIMIT 1`,
+    [releaseId]
+  );
+  if (open[0]) return open[0].id;
+  const release = await query<{ artist_id: string; title: string }>("SELECT artist_id, title FROM releases WHERE id = ?", [releaseId]);
+  const song = release[0];
+  if (!song) throw new Error("That song is not on file.");
+  const id = crypto.randomUUID();
+  await query(
+    `INSERT INTO tracks (id, release_id, artist_id, title, track_number, explicit, master_owner, publishing, bmi, mlc, soundexchange, created_at)
+     VALUES (?, ?, ?, ?, 1, 1, 'FOF Records', 'FOF Music Publishing', 0, 0, 0, ?)`,
+    [id, releaseId, song.artist_id, song.title, new Date().toISOString()]
+  );
+  return id;
 }
 
 async function attachAudio(trackId: string, id: string, mime: string) {
