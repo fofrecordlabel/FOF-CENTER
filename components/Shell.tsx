@@ -39,6 +39,7 @@ const NAV = [
   { href: "/people", label: "Directory" },
   { href: "/projects", label: "Budgets" },
   { href: "/spend", label: "Spending" },
+  { href: "/ops", label: "Ops Agents" },
 ];
 
 export function Shell({ children, alerts, day }: { children: ReactNode; alerts: DeskAlert[]; day: string }) {
