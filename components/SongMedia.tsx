@@ -122,11 +122,12 @@ function UploadMeter({ percent }: { percent: number }) {
 
 export async function uploadFile(file: Blob, fields: { kind: "cover" | "audio"; releaseId?: string; trackId?: string; mime: string; name: string }, onProgress?: (percent: number) => void) {
   const id = crypto.randomUUID();
-  const total = Math.max(1, Math.ceil(file.size / CHUNK));
+  const piece = fields.kind === "audio" ? 1024 * 1024 : CHUNK;
+  const total = Math.max(1, Math.ceil(file.size / piece));
   let sent = 0;
   for (let part = 0; part < total; part += 1) {
-    const start = part * CHUNK;
-    const slice = file.slice(start, Math.min(file.size, start + CHUNK));
+    const start = part * piece;
+    const slice = file.slice(start, Math.min(file.size, start + piece));
     onProgress?.(file.size ? Math.min(99, Math.round((sent / file.size) * 100)) : 0);
     const body = new FormData();
     body.set("id", id);
@@ -286,8 +287,9 @@ async function audioMime(file: File) {
   if (type === "audio/mpeg" || type === "audio/mp3" || type === "audio/mpeg3" || type === "audio/x-mpeg" || type === "audio/x-mp3") return "audio/mpeg";
   const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
   const riff = head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46;
+  const rf64 = head[0] === 0x52 && head[1] === 0x46 && head[2] === 0x36 && head[3] === 0x34;
   const wave = head[8] === 0x57 && head[9] === 0x41 && head[10] === 0x56 && head[11] === 0x45;
-  if (riff && wave) return "audio/wav";
+  if ((riff || rf64) && wave) return "audio/wav";
   const id3 = head[0] === 0x49 && head[1] === 0x44 && head[2] === 0x33;
   const frame = head[0] === 0xff && (head[1] & 0xe0) === 0xe0;
   if (id3 || frame) return "audio/mpeg";

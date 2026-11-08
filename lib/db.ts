@@ -417,6 +417,15 @@ export async function listTracksForRelease(releaseId: string) {
   return await many<Track>("SELECT * FROM tracks WHERE release_id = ? ORDER BY track_number, title COLLATE NOCASE", releaseId);
 }
 
+export async function listReleaseChecks() {
+  return await many<{ release_id: string; bmi: number; mlc: number; soundexchange: number }>(
+    `SELECT release_id, MAX(bmi) AS bmi, MAX(mlc) AS mlc, MAX(soundexchange) AS soundexchange
+     FROM tracks
+     WHERE release_id IS NOT NULL
+     GROUP BY release_id`
+  );
+}
+
 export async function listReleaseMasters() {
   return await many<{ release_id: string; id: string; title: string; audio_url: string | null }>(
     `SELECT tracks.release_id, tracks.id, tracks.title,

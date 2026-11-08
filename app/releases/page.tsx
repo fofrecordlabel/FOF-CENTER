@@ -3,8 +3,9 @@ import { ReleaseForm } from "@/components/RecordForms";
 import { ReleasePlay } from "@/components/ReleasePlay";
 import { MasterAdd } from "@/components/SongMedia";
 import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
+import { OpenRegistrations } from "@/components/TrackOps";
 import { Banner, Mono, PageHeader } from "@/components/ui";
-import { listArtists, listReleaseMasters, listReleaseViews } from "@/lib/db";
+import { listArtists, listReleaseChecks, listReleaseMasters, listReleaseViews } from "@/lib/db";
 import { money, prettyDate } from "@/lib/format";
 import { RELEASE_STATUSES, RELEASE_TYPES, labelFor, statusTone } from "@/lib/labels";
 
@@ -26,6 +27,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
     }
   }
   const artists = (await listArtists()).map((artist) => ({ id: artist.id, name: artist.name }));
+  const checks = new Map((await listReleaseChecks()).map((row) => [row.release_id, row]));
 
   return (
     <>
@@ -39,6 +41,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
           </Link>
         ))}
       </div>
+      <OpenRegistrations />
       <div className="table-wrap">
         <table>
           <thead>
@@ -68,6 +71,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
                     <Link className="release-open release-name" href={`/releases/${release.id}`}>
                       <span className="rowlink">{release.title}</span>
                       <span className="meta">{[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no].filter(Boolean).join(" · ")}</span>
+                      {Number(checks.get(release.id)?.bmi ?? 0) === 1 ? <span className="pill good">BMI</span> : <span className="pill down">Not on BMI</span>}
                     </Link>
                   </div>
                 </td>

@@ -1,7 +1,8 @@
 import { query } from "./pg";
 import { exec } from "./sql";
 
-const CHUNK = 480 * 1024;
+const COVER_CHUNK = 480 * 1024;
+const AUDIO_CHUNK = 1024 * 1024;
 const MAX_PARTS = 560;
 const MAX_AUDIO = 250 * 1024 * 1024;
 const MAX_COVER = 4 * 1024 * 1024;
@@ -16,23 +17,34 @@ export function mediaId(url: string | null | undefined) {
 export async function forgetMedia(url: string | null | undefined) {
   const id = mediaId(url);
   if (!id) return;
+  await exec("DELETE FROM file_parts WHERE id = ?", id);
   await exec("DELETE FROM files WHERE id = ?", id);
 }
 
 export async function readMedia(id: string, start: number, length: number) {
   if (!mediaId(`/media/${id}`)) return null;
-  const rows = await query<{ mime: string; name: string | null; size: number }>(
-    "SELECT mime, name, octet_length(bytes) AS size FROM files WHERE id = ?",
-    [id]
+  const fromByte = Math.max(0, start);
+  const takeHint = Math.max(0, length);
+  const rows = await query<{ mime: string; name: string | null; size: number; chunk: unknown; parts: number; part_size: number }>(
+    `SELECT mime, name,
+            octet_length(bytes) AS size,
+            substring(bytes from ? for ?) AS chunk,
+            (SELECT count(*)::int FROM file_parts WHERE file_parts.id = files.id) AS parts,
+            (SELECT COALESCE(sum(octet_length(bytes)), 0)::int FROM file_parts WHERE file_parts.id = files.id) AS part_size
+     FROM files WHERE id = ?`,
+    [fromByte + 1, takeHint, id]
   );
   const meta = rows[0];
   if (!meta) return null;
-  const size = Number(meta.size);
-  const from = Math.min(Math.max(0, start), Math.max(0, size - 1));
-  const take = Math.min(length, size - from);
+  const stored = Number(meta.size);
+  const partSize = Number(meta.part_size);
+  const useParts = Number(meta.parts) > 0 && partSize > 0 && stored === 0;
+  const size = useParts ? partSize : stored;
+  const from = Math.min(fromByte, Math.max(0, size - 1));
+  const take = Math.min(takeHint, size - from);
   if (take <= 0) return { mime: meta.mime, name: meta.name, size, bytes: Buffer.alloc(0) };
-  const chunks = await query<{ chunk: unknown }>("SELECT substring(bytes from ? for ?) AS chunk FROM files WHERE id = ?", [from + 1, take, id]);
-  return { mime: meta.mime, name: meta.name, size, bytes: asBuffer(chunks[0]?.chunk) };
+  const bytes = useParts ? await readPartRange(id, from, take) : asBuffer(meta.chunk);
+  return { mime: meta.mime, name: meta.name, size, bytes };
 }
 
 export async function storePart(input: {
@@ -49,8 +61,12 @@ export async function storePart(input: {
   if (!mediaId(`/media/${input.id}`)) throw new Error("That upload is not valid.");
   if (!Number.isInteger(input.part) || input.part < 0 || input.part >= MAX_PARTS) throw new Error(input.kind === "audio" ? "That master is over 250 MB." : "That upload is not valid.");
   if (!Number.isInteger(input.total) || input.total < 1 || input.total > MAX_PARTS || input.part >= input.total) throw new Error(input.kind === "audio" ? "That master is over 250 MB." : "That upload is not valid.");
-  if (input.bytes.byteLength === 0 || input.bytes.byteLength > CHUNK) throw new Error("That piece of the file is too large.");
-  const audioMime = input.kind === "audio" ? masterType(input.mime, input.name) ?? sniffAudio(input.bytes) : null;
+  const pieceLimit = input.kind === "audio" ? AUDIO_CHUNK : COVER_CHUNK;
+  if (input.bytes.byteLength === 0 || input.bytes.byteLength > pieceLimit) throw new Error("That piece of the file is too large.");
+  if (input.kind === "audio" && input.part < input.total - 1 && input.bytes.byteLength !== AUDIO_CHUNK) {
+    throw new Error("That piece of the file is the wrong size. Try the file again.");
+  }
+  const audioMime = input.kind === "audio" ? await audioType(input) : null;
   if (input.kind === "cover") {
     if (input.mime !== "image/jpeg") throw new Error("A cover has to be a JPEG.");
     if (!input.releaseId) throw new Error("Pick the song for this cover.");
@@ -64,6 +80,7 @@ export async function storePart(input: {
     "INSERT INTO file_parts (id, part, bytes) VALUES (?, ?, ?) ON CONFLICT (id, part) DO UPDATE SET bytes = EXCLUDED.bytes",
     [input.id, input.part, input.bytes]
   );
+  if (audioMime && input.part === 0) await rememberAudio(input.id, audioMime, input.name);
   const counted = await query<{ n: number }>("SELECT count(*)::int AS n FROM file_parts WHERE id = ?", [input.id]);
   if (Number(counted[0]?.n) !== input.total) return { done: false as const };
 
@@ -76,21 +93,51 @@ export async function storePart(input: {
     if (!size || size.width !== 3000 || size.height !== 3000) throw new Error("The cover has to be 3000×3000.");
     await attachCover(input.releaseId!, input.id, file, input.name);
   } else {
-    await query(
-      `INSERT INTO files (id, mime, name, bytes, created_at)
-       SELECT ?, ?, ?, bytea_agg(bytes ORDER BY part), ?
-       FROM file_parts WHERE id = ?`,
-      [input.id, audioMime, input.name.slice(0, 180), new Date().toISOString(), input.id]
-    );
-    await exec("DELETE FROM file_parts WHERE id = ?", input.id);
-    const saved = await query<{ size: number }>("SELECT octet_length(bytes) AS size FROM files WHERE id = ?", [input.id]);
+    await rememberAudio(input.id, audioMime!, input.name);
+    const saved = await query<{ size: number }>("SELECT COALESCE(sum(octet_length(bytes)), 0)::int AS size FROM file_parts WHERE id = ?", [input.id]);
     if (Number(saved[0]?.size ?? 0) > MAX_AUDIO) {
-      await exec("DELETE FROM files WHERE id = ?", input.id);
+      await forgetMedia(`/media/${input.id}`);
       throw new Error("That master is over 250 MB.");
     }
     await attachAudio(await resolveTrack(input.trackId, input.releaseId), input.id, audioMime!);
   }
   return { done: true as const, url: `/media/${input.id}` };
+}
+
+async function audioType(input: { id: string; part: number; mime: string; name: string; bytes: Uint8Array }) {
+  const known = masterType(input.mime, input.name) ?? (input.part === 0 ? sniffAudio(input.bytes) : null);
+  if (known) return known;
+  if (input.part === 0) return null;
+  const rows = await query<{ mime: string }>("SELECT mime FROM files WHERE id = ?", [input.id]);
+  const saved = rows[0]?.mime;
+  return saved === "audio/wav" || saved === "audio/mpeg" ? saved : null;
+}
+
+async function rememberAudio(id: string, mime: string, name: string) {
+  await query(
+    `INSERT INTO files (id, mime, name, bytes, created_at)
+     VALUES (?, ?, ?, ''::bytea, ?)
+     ON CONFLICT (id) DO UPDATE SET mime = EXCLUDED.mime, name = EXCLUDED.name`,
+    [id, mime, name.slice(0, 180), new Date().toISOString()]
+  );
+}
+
+async function readPartRange(id: string, start: number, length: number) {
+  const first = Math.floor(start / AUDIO_CHUNK);
+  const last = Math.floor((start + length - 1) / AUDIO_CHUNK);
+  const rows = await query<{ part: number; bytes: unknown }>(
+    "SELECT part, bytes FROM file_parts WHERE id = ? AND part >= ? AND part <= ? ORDER BY part",
+    [id, first, last]
+  );
+  const chunks: Buffer[] = [];
+  for (const row of rows) {
+    const buf = asBuffer(row.bytes);
+    const partStart = row.part * AUDIO_CHUNK;
+    const sliceFrom = Math.max(0, start - partStart);
+    const sliceTo = Math.min(buf.length, start + length - partStart);
+    if (sliceTo > sliceFrom) chunks.push(buf.subarray(sliceFrom, sliceTo));
+  }
+  return Buffer.concat(chunks);
 }
 
 async function attachCover(releaseId: string, id: string, bytes: Buffer, name: string) {
@@ -130,8 +177,8 @@ async function resolveTrack(trackId: string | null, releaseId: string | null) {
   if (!song) throw new Error("That song is not on file.");
   const id = crypto.randomUUID();
   await query(
-    `INSERT INTO tracks (id, release_id, artist_id, title, track_number, explicit, master_owner, publishing, bmi, mlc, soundexchange, created_at)
-     VALUES (?, ?, ?, ?, 1, 1, 'FOF Records', 'FOF Music Publishing', 0, 0, 0, ?)`,
+    `INSERT INTO tracks (id, release_id, artist_id, title, track_number, explicit, writers, writer_ipis, master_owner, publishing, bmi, mlc, soundexchange, created_at)
+     VALUES (?, ?, ?, ?, 1, 1, 'NOAH MCBRIDE', 'NOAH MCBRIDE 01285250159', 'FOF Records', 'FOF Music Publishing', 0, 0, 0, ?)`,
     [id, releaseId, song.artist_id, song.title, new Date().toISOString()]
   );
   return id;
@@ -153,9 +200,10 @@ async function attachAudio(trackId: string, id: string, mime: string) {
 }
 
 function sniffAudio(bytes: Uint8Array) {
-  if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45) {
-    return "audio/wav";
-  }
+  const wave = bytes.length >= 12 && bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45;
+  const riff = bytes.length >= 4 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+  const rf64 = bytes.length >= 4 && bytes[0] === 0x52 && bytes[1] === 0x46 && bytes[2] === 0x36 && bytes[3] === 0x34;
+  if (wave && (riff || rf64)) return "audio/wav";
   if (bytes.length >= 3 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) return "audio/mpeg";
   if (bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) return "audio/mpeg";
   return null;

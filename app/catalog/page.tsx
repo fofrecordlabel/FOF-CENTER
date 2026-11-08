@@ -4,7 +4,7 @@ import { ConfirmSubmit } from "@/components/controls";
 import { CampaignBlock, DeliveryChecks, SplitList } from "@/components/ReleaseOps";
 import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
 import { CoverUpload, MasterAdd, MasterAudio } from "@/components/SongMedia";
-import { RegistrationMarks, TakedownControls } from "@/components/TrackOps";
+import { OpenRegistrations, RegistrationMarks, TakedownControls } from "@/components/TrackOps";
 import { RoyaltyForm, TrackForm } from "@/components/RecordForms";
 import { Balance, Banner, Mono, PageHeader } from "@/components/ui";
 import { listArtists, listBookings, listCampaigns, listInfluencers, listReleaseViews, listRoyaltyViews, listSplits, listTakedowns, listTrackViews, rosterRows } from "@/lib/db";
@@ -45,6 +45,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         </Link>
       </PageHeader>
       <Banner message={error} />
+      <OpenRegistrations />
       {stillDown.length ? (
         <section className="down-board">
           <p className="kicker">Takedowns</p>

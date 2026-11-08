@@ -10,7 +10,7 @@ function deskUrl(raw: string) {
     ? raw.replace(".pooler.supabase.com:5432", ".pooler.supabase.com:6543")
     : raw;
   if (!url.includes("search_path")) {
-    url += `${url.includes("?") ? "&" : "?"}options=-c%20search_path%3Ddesk`;
+    url += `${url.includes("?") ? "&" : "?"}options=-c%20search_path%3Ddesk%20-c%20statement_timeout%3D45000`;
   }
   return url;
 }
@@ -22,8 +22,8 @@ function openSql() {
     ssl: "require",
     prepare: false,
     fetch_types: false,
-    max: 1,
-    max_pipeline: 1,
+    max: 4,
+    max_pipeline: 4,
     idle_timeout: 2,
     max_lifetime: 60,
     connect_timeout: 10,
@@ -64,12 +64,18 @@ function lockedOut(error: unknown) {
 }
 
 export async function query<T>(statement: string, args: SqlValue[] = []): Promise<T[]> {
-  const run = () => getSql().unsafe(toPg(statement), args as never[]);
+  const run = async () => {
+    const rows = await getSql().begin(async (tx) => {
+      await tx.unsafe("SET TRANSACTION READ WRITE");
+      return await tx.unsafe(toPg(statement), args as never[]);
+    });
+    return [...rows] as T[];
+  };
   try {
-    return [...(await run())] as T[];
+    return await run();
   } catch (error) {
     if (!lockedOut(error)) throw error;
     await dropSql();
-    return [...(await run())] as T[];
+    return await run();
   }
 }

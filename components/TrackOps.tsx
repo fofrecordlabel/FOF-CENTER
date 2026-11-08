@@ -1,7 +1,33 @@
+import Link from "next/link";
 import { logTakedown, restoreTakedown } from "@/lib/actions";
+import { listReleaseChecks, listReleaseViews } from "@/lib/db";
 import { prettyDate, today } from "@/lib/format";
 import { STORES, labelFor } from "@/lib/labels";
 import type { Takedown, Track } from "@/lib/types";
+
+export async function OpenRegistrations() {
+  const checks = new Map((await listReleaseChecks()).map((row) => [row.release_id, row]));
+  const missing = (await listReleaseViews()).filter((release) => Number(checks.get(release.id)?.bmi ?? 0) !== 1);
+  return (
+    <section className="card stack" id="registration">
+      <h2>Not registered</h2>
+      {missing.length ? (
+        <p>
+          <b>Not on BMI. </b>
+          {missing.map((release, index) => (
+            <span key={release.id}>
+              {index ? ", " : ""}
+              <Link href={`/releases/${release.id}`}>{release.title}</Link>
+            </span>
+          ))}
+        </p>
+      ) : (
+        <p>Every song is on BMI.</p>
+      )}
+      <p className="meta">MLC and SoundExchange are still open on every song.</p>
+    </section>
+  );
+}
 
 export function RegistrationMarks({ track }: { track: Pick<Track, "bmi" | "mlc" | "soundexchange"> }) {
   const marks = [

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { clearSampleDesk } from "@/lib/actions";
 import { ConfirmSubmit } from "@/components/controls";
 import { DailyTodos, PostNotifications } from "@/components/DeskToday";
+import { OpenRegistrations } from "@/components/TrackOps";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
 import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
 import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, listPostChecks, listReleaseViews, listTodos, rosterRows } from "@/lib/db";
@@ -82,6 +83,8 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
           <span>Logged today</span>
         </Link>
       </section>
+
+      <OpenRegistrations />
 
       <section className="section stack" id="listeners">
         {artists.map((artist) => (
