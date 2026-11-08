@@ -8,6 +8,10 @@ export async function middleware(request: NextRequest) {
     headers.set("x-desk-path", "/lock");
     return NextResponse.next({ request: { headers } });
   }
+  // Cron routes authenticate with AGENTS_CRON_SECRET inside the handler.
+  if (pathname.startsWith("/api/agents/cron")) {
+    return NextResponse.next();
+  }
   const token = request.cookies.get("fof_desk")?.value;
   if (token && token === (await deskToken())) return NextResponse.next();
   const url = request.nextUrl.clone();

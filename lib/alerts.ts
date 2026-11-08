@@ -21,6 +21,20 @@ export async function deskAlerts(): Promise<DeskAlert[]> {
     listPostChecks(day),
   ]);
   const alerts: DeskAlert[] = [...postAlerts(posted.map((row) => row.slot_time))];
+  try {
+    const { listAlerts } = await import("@/lib/agents/store");
+    const agentAlerts = await listAlerts(5);
+    for (const alert of agentAlerts.filter((row) => row.acknowledged === 0 && row.severity === "critical").slice(0, 3)) {
+      alerts.push({
+        id: `agent-${alert.id}`,
+        title: alert.title,
+        detail: alert.detail,
+        href: "/ops",
+      });
+    }
+  } catch {
+    // Agent tables may not exist until the first ops run; desk alerts still work.
+  }
   const open = todos.filter((todo) => todo.done === 0 && todo.todo_date <= day);
   const minute = deskMinutes();
   const reminded = open.filter((todo) => {

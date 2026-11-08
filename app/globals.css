@@ -997,6 +997,19 @@ details.drawer summary { min-height: 48px; display: flex; align-items: center; f
 .category-track { height: 8px; border-radius: 99px; background: #1c1c1c; overflow: hidden; }
 .category-track span { display: block; height: 100%; background: #ffffff; }
 .expense-line { display: flex; justify-content: space-between; gap: 12px; align-items: start; padding-top: 12px; border-top: 1px solid var(--line); }
+.briefing {
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--line);
+  background: #080808;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+}
 
 @media (max-width: 860px) {
   .metric-grid { grid-template-columns: 1fr 1fr; }
