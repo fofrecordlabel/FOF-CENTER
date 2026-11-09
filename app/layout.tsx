@@ -47,7 +47,14 @@ export const runtime = "nodejs";
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   await connection();
   const locked = (await headers()).get("x-desk-path") === "/lock";
-  const alerts = locked ? [] : await deskAlerts();
+  let alerts: Awaited<ReturnType<typeof deskAlerts>> = [];
+  if (!locked) {
+    try {
+      alerts = await deskAlerts();
+    } catch {
+      alerts = [];
+    }
+  }
   return (
     <html lang="en" className={`${newsreader.variable} ${outfit.variable}`}>
       <body>

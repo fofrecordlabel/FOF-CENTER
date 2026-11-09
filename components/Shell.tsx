@@ -23,23 +23,40 @@ const TABS = [
   { href: "/#listeners", label: "Listeners" },
 ];
 
-const NAV = [
-  { href: "/", label: "Desk" },
-  { href: "/checklist", label: "Checklist" },
-  { href: "/checklist/activity", label: "Activity" },
-  { href: "/pipeline", label: "A&R Pipeline" },
-  { href: "/roster", label: "Roster" },
-  { href: "/catalog", label: "Catalog" },
-  { href: "/log", label: "Daily log" },
-  { href: "/week", label: "Week" },
-  { href: "/influencers", label: "Contacts" },
-  { href: "/art", label: "Cover Art" },
-  { href: "/releases", label: "Releases" },
-  { href: "/deals", label: "Business Affairs" },
-  { href: "/people", label: "Directory" },
-  { href: "/projects", label: "Budgets" },
-  { href: "/spend", label: "Spending" },
+const GROUPS = [
+  {
+    label: "Today",
+    items: [
+      { href: "/", label: "Desk" },
+      { href: "/checklist", label: "Checklist" },
+      { href: "/checklist/activity", label: "Activity" },
+      { href: "/log", label: "Daily log" },
+      { href: "/week", label: "Week" },
+    ],
+  },
+  {
+    label: "Music",
+    items: [
+      { href: "/releases", label: "Releases" },
+      { href: "/catalog", label: "Catalog" },
+      { href: "/art", label: "Cover Art" },
+      { href: "/roster", label: "Roster" },
+      { href: "/pipeline", label: "A&R Pipeline" },
+    ],
+  },
+  {
+    label: "Office",
+    items: [
+      { href: "/influencers", label: "Contacts" },
+      { href: "/people", label: "Directory" },
+      { href: "/deals", label: "Business Affairs" },
+      { href: "/projects", label: "Budgets" },
+      { href: "/spend", label: "Spending" },
+    ],
+  },
 ];
+
+const NAV = GROUPS.flatMap((group) => group.items);
 
 export function Shell({ children, alerts, day }: { children: ReactNode; alerts: DeskAlert[]; day: string }) {
   const path = usePathname();
@@ -64,10 +81,15 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
           <em>Label desk</em>
         </Link>
         <nav className="nav">
-          {NAV.map((item) => (
-            <Link key={item.href} href={item.href} className={active(item.href) ? "active" : undefined}>
-              {item.label}
-            </Link>
+          {GROUPS.map((group) => (
+            <div className="nav-group" key={group.label}>
+              <p className="nav-label">{group.label}</p>
+              {group.items.map((item) => (
+                <Link key={item.href} href={item.href} className={active(item.href) ? "active" : undefined}>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="grow" />
@@ -118,10 +140,15 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
       </nav>
       {menu ? (
         <nav className="phone-menu" aria-label="Sections">
-          {NAV.map((item) => (
-            <Link key={item.href} href={item.href} className={active(item.href) ? "active" : undefined}>
-              {item.label}
-            </Link>
+          {GROUPS.map((group) => (
+            <div className="nav-group" key={group.label}>
+              <p className="nav-label">{group.label}</p>
+              {group.items.map((item) => (
+                <Link key={item.href} href={item.href} className={active(item.href) ? "active" : undefined}>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
           ))}
           <Link className="btn primary" href="/artists/new">
             Add artist
