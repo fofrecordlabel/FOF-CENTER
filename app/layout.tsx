@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import { Shell } from "@/components/Shell";
 import { deskAlerts } from "@/lib/alerts";
 import { today } from "@/lib/format";
-import { query } from "@/lib/pg";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -49,32 +48,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   await connection();
   const locked = (await headers()).get("x-desk-path") === "/lock";
   let alerts: Awaited<ReturnType<typeof deskAlerts>> = [];
-  let online = true;
   if (!locked) {
     try {
-      await query("SELECT 1");
       alerts = await deskAlerts();
     } catch {
-      online = false;
+      alerts = [];
     }
   }
   return (
     <html lang="en" className={`${newsreader.variable} ${outfit.variable}`}>
       <body>
-        {locked ? (
-          children
-        ) : (
-          <Shell alerts={alerts} day={today()}>
-            {online ? (
-              children
-            ) : (
-              <div className="empty">
-                <h1>The desk is offline</h1>
-                <p>The database is full. After Supabase Pro is on, the songs and WAV files come back.</p>
-              </div>
-            )}
-          </Shell>
-        )}
+        {locked ? children : <Shell alerts={alerts} day={today()}>{children}</Shell>}
       </body>
     </html>
   );

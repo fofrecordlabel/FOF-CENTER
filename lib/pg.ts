@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { runHeld } from "./held";
 import type { SqlValue } from "./sql";
 
 const globalForSql = globalThis as unknown as { fofSql?: postgres.Sql };
@@ -79,8 +80,15 @@ function lockedOut(error: unknown) {
   return code === "EMAXCONNSESSION" || code === "ECONNRESET" || code === "08006" || code === "08001";
 }
 
+function fromHeld<T>(statement: string, args: SqlValue[]): T[] {
+  const writing = /^\s*(insert|update|delete)\b/i.test(statement);
+  const keep = /checklist_templates/i.test(statement) || /update artists set image_url/i.test(statement);
+  if (writing && !keep) throw new Error("This did not save.");
+  return runHeld<T>(statement, args);
+}
+
 export async function query<T>(statement: string, args: SqlValue[] = []): Promise<T[]> {
-  if (Date.now() < downUntil) throw new Error("The database is not accepting connections.");
+  if (Date.now() < downUntil) return fromHeld<T>(statement, args);
   const run = async () => {
     const rows = await getSql().begin(async (tx) => {
       await tx.unsafe("SET TRANSACTION READ WRITE");
@@ -102,7 +110,7 @@ export async function query<T>(statement: string, args: SqlValue[] = []): Promis
     if (databaseDown(error)) {
       downUntil = Date.now() + 20000;
       await dropSql();
-      throw new Error("The database is not accepting connections.");
+      return fromHeld<T>(statement, args);
     }
     if (!lockedOut(error)) throw error;
     await dropSql();
