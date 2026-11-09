@@ -26,7 +26,7 @@ function openSql() {
     max_pipeline: 4,
     idle_timeout: 2,
     max_lifetime: 60,
-    connect_timeout: 10,
+    connect_timeout: 4,
     types: {
       int8: {
         to: 20,
@@ -57,13 +57,30 @@ function toPg(query: string) {
   });
 }
 
+let downUntil = 0;
+
+function errorCode(error: unknown) {
+  if (!error || typeof error !== "object" || !("code" in error)) return "";
+  return String(error.code);
+}
+
+function errorText(error: unknown) {
+  return error instanceof Error ? error.message : "";
+}
+
+function databaseDown(error: unknown) {
+  const code = errorCode(error);
+  const text = errorText(error);
+  return code === "57P01" || code === "57P03" || code === "CONNECTION_CLOSED" || /not accepting connections|administrator command|no space left|CONNECTION_CLOSED/i.test(text);
+}
+
 function lockedOut(error: unknown) {
-  if (!error || typeof error !== "object") return false;
-  const code = "code" in error ? String(error.code) : "";
-  return code === "EMAXCONNSESSION" || code === "ECONNRESET" || code === "57P01" || code === "08006" || code === "08001";
+  const code = errorCode(error);
+  return code === "EMAXCONNSESSION" || code === "ECONNRESET" || code === "08006" || code === "08001";
 }
 
 export async function query<T>(statement: string, args: SqlValue[] = []): Promise<T[]> {
+  if (Date.now() < downUntil) throw new Error("The database is not accepting connections.");
   const run = async () => {
     const rows = await getSql().begin(async (tx) => {
       await tx.unsafe("SET TRANSACTION READ WRITE");
@@ -71,11 +88,26 @@ export async function query<T>(statement: string, args: SqlValue[] = []): Promis
     });
     return [...rows] as T[];
   };
+  const work = run();
+  void work.catch(() => undefined);
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await run();
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(Object.assign(new Error("The database is not accepting connections."), { code: "57P03" })), 3000);
+      }),
+    ]);
   } catch (error) {
+    if (databaseDown(error)) {
+      downUntil = Date.now() + 20000;
+      await dropSql();
+      throw new Error("The database is not accepting connections.");
+    }
     if (!lockedOut(error)) throw error;
     await dropSql();
     return await run();
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
