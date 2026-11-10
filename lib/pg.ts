@@ -24,7 +24,7 @@ function openSql() {
     prepare: false,
     fetch_types: false,
     max: 4,
-    max_pipeline: 4,
+    max_pipeline: 0,
     idle_timeout: 2,
     max_lifetime: 60,
     connect_timeout: 8,
