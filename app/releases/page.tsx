@@ -14,10 +14,16 @@ export const metadata = { title: "Releases" };
 export default async function ReleasesPage({ searchParams }: { searchParams: Promise<{ status?: string; error?: string }> }) {
   const { status, error } = await searchParams;
   const current = RELEASE_STATUSES.some((item) => item.value === status) ? status : "all";
-  const releases = (await listReleaseViews()).filter((release) => current === "all" || release.status === current);
+  const [releaseRows, masterRows, artistRows, checkRows] = await Promise.all([
+    listReleaseViews(),
+    listReleaseMasters(),
+    listArtists(),
+    listReleaseChecks(),
+  ]);
+  const releases = releaseRows.filter((release) => current === "all" || release.status === current);
   const masters = new Map<string, { title: string; src: string }[]>();
   const openTrack = new Map<string, string>();
-  for (const master of await listReleaseMasters()) {
+  for (const master of masterRows) {
     if (master.audio_url) {
       const list = masters.get(master.release_id) ?? [];
       list.push({ title: master.title, src: master.audio_url });
@@ -26,8 +32,8 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
       openTrack.set(master.release_id, master.id);
     }
   }
-  const artists = (await listArtists()).map((artist) => ({ id: artist.id, name: artist.name }));
-  const checks = new Map((await listReleaseChecks()).map((row) => [row.release_id, row]));
+  const artists = artistRows.map((artist) => ({ id: artist.id, name: artist.name }));
+  const checks = new Map(checkRows.map((row) => [row.release_id, row]));
 
   return (
     <>

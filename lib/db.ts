@@ -202,6 +202,8 @@ export async function getTemplate(id: string) {
 }
 
 async function seedDailyTasks() {
+  const existing = await query<{ n: number }>("SELECT COUNT(*) AS n FROM checklist_templates WHERE locked = 1");
+  if (Number(existing[0]?.n ?? 0) >= DEFAULT_TASKS.length) return;
   const stamp = new Date().toISOString();
   for (const task of DEFAULT_TASKS) {
     try {
