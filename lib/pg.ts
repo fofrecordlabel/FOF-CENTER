@@ -27,7 +27,7 @@ function openSql() {
     max_pipeline: 4,
     idle_timeout: 2,
     max_lifetime: 60,
-    connect_timeout: 4,
+    connect_timeout: 8,
     types: {
       int8: {
         to: 20,
@@ -87,10 +87,19 @@ function fromHeld<T>(statement: string, args: SqlValue[]): T[] {
   return runHeld<T>(statement, args);
 }
 
+function reading(statement: string) {
+  return /^\s*(select|with)\b/i.test(statement);
+}
+
 export async function query<T>(statement: string, args: SqlValue[] = []): Promise<T[]> {
   if (Date.now() < downUntil) return fromHeld<T>(statement, args);
   const run = async () => {
-    const rows = await getSql().begin(async (tx) => {
+    const sql = getSql();
+    if (reading(statement)) {
+      const rows = await sql.unsafe(toPg(statement), args as never[]);
+      return [...rows] as T[];
+    }
+    const rows = await sql.begin(async (tx) => {
       await tx.unsafe("SET TRANSACTION READ WRITE");
       return await tx.unsafe(toPg(statement), args as never[]);
     });
@@ -103,7 +112,7 @@ export async function query<T>(statement: string, args: SqlValue[] = []): Promis
     return await Promise.race([
       work,
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(Object.assign(new Error("The database is not accepting connections."), { code: "57P03" })), 3000);
+        timer = setTimeout(() => reject(Object.assign(new Error("The database is not accepting connections."), { code: "57P03" })), 10000);
       }),
     ]);
   } catch (error) {
