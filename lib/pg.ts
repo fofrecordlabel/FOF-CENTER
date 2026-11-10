@@ -105,8 +105,16 @@ export async function query<T>(statement: string, args: SqlValue[] = []): Promis
     });
     return [...rows] as T[];
   };
+  const work = run();
+  void work.catch(() => undefined);
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await run();
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(Object.assign(new Error("The database is not accepting connections."), { code: "57P03" })), 4000);
+      }),
+    ]);
   } catch (error) {
     if (databaseDown(error)) {
       downUntil = Date.now() + 20000;
@@ -116,5 +124,7 @@ export async function query<T>(statement: string, args: SqlValue[] = []): Promis
     if (!lockedOut(error)) throw error;
     await dropSql();
     return await run();
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
