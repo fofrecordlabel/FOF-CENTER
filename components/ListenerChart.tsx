@@ -103,13 +103,13 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
       <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={active ? `${count(active.listeners)} monthly listeners on ${prettyDate(active.log_date)}` : "Listener chart, empty"}>
         {ticksSafe(scale).map((tick) => (
           <g key={tick}>
-            <line x1={PAD_L} x2={W - PAD_R} y1={yOf(tick)} y2={yOf(tick)} stroke={tick === 100_000 ? "#ffffff" : "#1c1c1c"} strokeWidth={tick === 100_000 ? 1.5 : 1} />
-            <text x={PAD_L - 10} y={yOf(tick) + 4} fill="#737373" fontSize="11" textAnchor="end">
+            <line x1={PAD_L} x2={W - PAD_R} y1={yOf(tick)} y2={yOf(tick)} stroke={tick === 100_000 ? "var(--ink)" : "var(--chart-grid)"} strokeWidth={tick === 100_000 ? 1.5 : 1} />
+            <text x={PAD_L - 10} y={yOf(tick) + 4} fill="var(--faint)" fontSize="11" textAnchor="end">
               {compact(tick)}
             </text>
           </g>
         ))}
-        {area ? <path d={area} fill="#ffffff" opacity="0.06" /> : null}
+        {area ? <path d={area} fill="var(--ink)" opacity="0.08" /> : null}
         {moves.map((item) => {
           const x1 = xOf(item.from.log_date);
           const y1 = yOf(item.from.listeners);
@@ -122,7 +122,7 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
               y1={y1}
               x2={x2}
               y2={y2}
-              stroke={item.kind === "drop" ? "#ff4d4d" : item.kind === "spike" ? "#3ddc84" : "#ffffff"}
+              stroke={item.kind === "drop" ? "var(--hot)" : item.kind === "spike" ? "var(--good)" : "var(--ink)"}
               strokeWidth={item.kind === "flat" ? 1.5 : 2.75}
               strokeLinecap="round"
               opacity={item.kind === "flat" ? 0.45 : 1}
@@ -134,7 +134,7 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
           const y = (yOf(item.from.listeners) + yOf(item.to.listeners)) / 2;
           const below = item.kind === "drop";
           return (
-            <text key={`label-${item.to.id}`} x={x} y={below ? y + 18 : y - 12} fill={item.kind === "drop" ? "#ff4d4d" : item.kind === "spike" ? "#3ddc84" : "#ffffff"} fontSize="13" fontStyle="italic" textAnchor="middle">
+            <text key={`label-${item.to.id}`} x={x} y={below ? y + 18 : y - 12} fill={item.kind === "drop" ? "var(--hot-read)" : item.kind === "spike" ? "var(--good-read)" : "var(--ink)"} fontSize="13" fontStyle="italic" textAnchor="middle">
               {item.kind === "drop" ? "−" : item.kind === "spike" ? "+" : ""}
               {item.kind === "flat" ? "Flat" : count(Math.abs(item.delta))}
             </text>
@@ -145,8 +145,8 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
           const x = xOf(mark.log_date) + slot * 14;
           return (
             <g key={mark.id}>
-              <line x1={x} y1={10} x2={x} y2={PAD_T - 6} stroke="#ffffff" strokeWidth="1" />
-              <text x={x} y={9} fill="#ffffff" fontSize="11" textAnchor="middle">
+              <line x1={x} y1={10} x2={x} y2={PAD_T - 6} stroke="var(--ink)" strokeWidth="1" />
+              <text x={x} y={9} fill="var(--ink)" fontSize="11" textAnchor="middle">
                 {markLetter(mark.kind)}
               </text>
             </g>
@@ -176,18 +176,18 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
                   }
                 }}
               />
-              {on || extreme ? <circle cx={x} cy={y} r="10" fill="none" stroke="#ffffff" strokeWidth="1" opacity={on ? 1 : 0.45} /> : null}
-              <circle cx={x} cy={y} r={on ? 5 : 4} fill={log.id === drop?.to.id && !on ? "#a3a3a3" : "#ffffff"} />
+              {on || extreme ? <circle cx={x} cy={y} r="10" fill="none" stroke="var(--ink)" strokeWidth="1" opacity={on ? 1 : 0.45} /> : null}
+              <circle cx={x} cy={y} r={on ? 5 : 4} fill={log.id === drop?.to.id && !on ? "var(--muted)" : "var(--ink)"} />
             </g>
           );
         })}
         {first ? (
-          <text x={logs.length === 1 ? xOf(first.log_date) : PAD_L} y={H - 12} fill="#737373" fontSize="11" textAnchor={logs.length === 1 ? "middle" : "start"}>
+          <text x={logs.length === 1 ? xOf(first.log_date) : PAD_L} y={H - 12} fill="var(--faint)" fontSize="11" textAnchor={logs.length === 1 ? "middle" : "start"}>
             {prettyDate(first.log_date)}
           </text>
         ) : null}
         {last && logs.length > 1 ? (
-          <text x={W - PAD_R} y={H - 12} fill="#737373" fontSize="11" textAnchor="end">
+          <text x={W - PAD_R} y={H - 12} fill="var(--faint)" fontSize="11" textAnchor="end">
             {prettyDate(last.log_date)}
           </text>
         ) : null}

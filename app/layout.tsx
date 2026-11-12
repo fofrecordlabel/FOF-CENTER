@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Newsreader, Outfit } from "next/font/google";
 import { connection } from "next/server";
 import { headers } from "next/headers";
+import Script from "next/script";
 import { Shell } from "@/components/Shell";
+import { ThemeBoot } from "@/components/ThemeToggle";
 import { deskAlerts } from "@/lib/alerts";
 import { today } from "@/lib/format";
 import "./globals.css";
@@ -56,8 +58,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     }
   }
   return (
-    <html lang="en" className={`${newsreader.variable} ${outfit.variable}`}>
+    <html lang="en" data-theme="dark" suppressHydrationWarning className={`${newsreader.variable} ${outfit.variable}`}>
       <body>
+        <ThemeBoot />
+        <Script id="fof-theme" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem("fof-theme");if(t!=="light"&&t!=="dark")t="dark";document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",t==="light"?"#f3f3f1":"#000000");}catch(e){}})();`}
+        </Script>
         {locked ? children : <Shell alerts={alerts} day={today()}>{children}</Shell>}
       </body>
     </html>

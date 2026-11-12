@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { BrandLogo } from "./BrandLogo";
 import { DraftKeeper } from "./DraftKeeper";
 import { DeskAlerts } from "./DeskAlerts";
 import { QuietSave } from "./QuietSave";
 import { SavedNotice } from "./SavedNotice";
+import { ThemeToggle } from "./ThemeToggle";
 import type { DeskAlert } from "@/lib/alerts";
 
 function tabDot(href: string, alerts: { id: string; href: string }[]) {
@@ -77,7 +79,7 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
     <div className={menu ? "shell menu-open" : "shell"}>
       <aside className="rail">
         <Link className="brand" href="/">
-          <img className="brand-logo" src="/brand/fof.png" alt="FOF Records" />
+          <BrandLogo alt="FOF Records" />
           <em>Label desk</em>
         </Link>
         <nav className="nav">
@@ -96,6 +98,7 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
         <Link className="btn primary" href="/artists/new">
           Add artist
         </Link>
+        <ThemeToggle />
         <p className="rail-foot">Internal</p>
       </aside>
       <div className="topbar">
@@ -111,10 +114,11 @@ export function Shell({ children, alerts, day }: { children: ReactNode; alerts: 
           <span />
         </button>
         <Link className="mobile-brand" href="/" aria-label="FOF Records">
-          <img className="brand-logo" src="/brand/fof.png" alt="" />
+          <BrandLogo alt="" />
         </Link>
         <p className="phone-here">{here}</p>
         <p className="kicker desk-kicker">FOF Records · Internal</p>
+        <ThemeToggle />
         <form className="search" action="/search" method="get">
           <input name="q" placeholder="Search the desk" aria-label="Search the desk" enterKeyHint="search" />
         </form>
