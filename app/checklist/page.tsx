@@ -13,9 +13,8 @@ export const metadata = { title: "Checklist" };
 export default async function ChecklistPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const day = today();
-  const todos = await listTodos();
-  const templates = await listTemplates();
-  const releases = (await listReleaseViews()).map((release) => ({ id: release.id, title: release.title }));
+  const [todos, templates, releaseViews] = await Promise.all([listTodos(), listTemplates(), listReleaseViews()]);
+  const releases = releaseViews.map((release) => ({ id: release.id, title: release.title }));
   const stats = checklistStats(todos, day);
   const days = checklistDays(todos, day);
   const todayLines = days.find(([date]) => date === day)?.[1] ?? [];

@@ -15,18 +15,23 @@ export const metadata = { title: "Desk" };
 
 export default async function DeskPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const desk = await dashboard();
-  const sample = await hasSample();
-  const roster = await rosterRows();
-  const artists = await listArtists();
-  const listenerLogs = await listListenerLogs();
-  const logs = await listLogs();
+  const day = today();
+  const [desk, sample, roster, artists, listenerLogs, logs, todos, releaseViews, posted] = await Promise.all([
+    dashboard(),
+    hasSample(),
+    rosterRows(),
+    listArtists(),
+    listListenerLogs(),
+    listLogs(),
+    listTodos(),
+    listReleaseViews(),
+    listPostChecks(day),
+  ]);
   const doneLogs = logs.filter((entry) => entry.status !== "planned");
-  const todayCount = doneLogs.filter((entry) => entry.log_date === today()).length;
-  const todayLogs = doneLogs.filter((entry) => entry.log_date === today()).slice(0, 8);
-  const todos = await listTodos();
-  const releases = (await listReleaseViews()).map((release) => ({ id: release.id, title: release.title }));
-  const todayChecks = dayStats(todos.filter((todo) => todo.todo_date === today()));
+  const todayCount = doneLogs.filter((entry) => entry.log_date === day).length;
+  const todayLogs = doneLogs.filter((entry) => entry.log_date === day).slice(0, 8);
+  const releases = releaseViews.map((release) => ({ id: release.id, title: release.title }));
+  const todayChecks = dayStats(todos.filter((todo) => todo.todo_date === day));
   const listenerTotal = artists.reduce((sum, artist) => sum + (artist.monthly_listeners ?? 0), 0);
   const listenerMove = listenerLogs
     .slice()
@@ -34,8 +39,8 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
     .slice(-2)
     .reduce((move, log, index, pair) => (index === 0 ? move : log.listeners - pair[0].listeners), 0);
   const hasListeners = artists.some((artist) => artist.monthly_listeners != null);
-  const duePosts = logs.filter((entry) => entry.status === "planned" && entry.kind === "post" && entry.log_date <= today());
-  const postedSlots = new Set((await listPostChecks(today())).map((row) => row.slot_time));
+  const duePosts = logs.filter((entry) => entry.status === "planned" && entry.kind === "post" && entry.log_date <= day);
+  const postedSlots = new Set(posted.map((row) => row.slot_time));
   const minute = deskMinutes();
   const openPostTimes = POST_SLOTS.filter((slot) => !postedSlots.has(slot.time) && (reminderMinutes(slot.time) ?? 0) <= minute).length;
 
