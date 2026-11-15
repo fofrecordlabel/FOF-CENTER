@@ -3,7 +3,6 @@ import { ReleaseForm } from "@/components/RecordForms";
 import { ReleasePlay } from "@/components/ReleasePlay";
 import { MasterAdd } from "@/components/SongMedia";
 import { DistributorPick, ReleaseStatus } from "@/components/ReleaseMarks";
-import { OpenRegistrations, RegistrationMarks } from "@/components/TrackOps";
 import { Banner, Mono, PageHeader } from "@/components/ui";
 import { listArtists, listReleaseChecks, listReleaseMasters, listReleaseViews } from "@/lib/db";
 import { money, prettyDate } from "@/lib/format";
@@ -47,8 +46,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
           </Link>
         ))}
       </div>
-      <OpenRegistrations next="/releases" />
-      <div className="table-wrap">
+      <div className="table-wrap song-sheet">
         <table>
           <thead>
             <tr>
@@ -76,8 +74,8 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
                     )}
                     <Link className="release-open release-name" href={`/releases/${release.id}`}>
                       <span className="rowlink">{release.title}</span>
-                      <span className="meta">{[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no, release.distributor || "No distributor"].filter(Boolean).join(" · ")}</span>
-                      <RegistrationMarks track={checks.get(release.id) ?? { bmi: 0, mlc: 0, soundexchange: 0, sentric: 0 }} />
+                      <span className="meta">{[labelFor(RELEASE_TYPES, release.release_type), release.catalog_no].filter(Boolean).join(" · ")}</span>
+                      {Number(checks.get(release.id)?.bmi ?? 0) === 1 ? <span className="pill good">BMI</span> : <span className="pill down">Not on BMI</span>}
                     </Link>
                   </div>
                 </td>

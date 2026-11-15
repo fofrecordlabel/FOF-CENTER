@@ -2,7 +2,6 @@ import Link from "next/link";
 import { clearSampleDesk } from "@/lib/actions";
 import { ConfirmSubmit } from "@/components/controls";
 import { DailyTodos, PostNotifications } from "@/components/DeskToday";
-import { OpenRegistrations, ReleaseJobs } from "@/components/TrackOps";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
 import { QuickLinks } from "@/components/QuickLinks";
 import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
@@ -126,9 +125,6 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
         </div>
         <QuickLinks mode="dock" />
       </section>
-
-      <ReleaseJobs />
-      <OpenRegistrations />
 
       <section className="section stack" id="listeners">
         {artists.map((artist) => (

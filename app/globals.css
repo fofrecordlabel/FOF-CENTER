@@ -355,6 +355,24 @@ select.status-pick.down { color: #2a0000; background: var(--hot); border-color: 
 .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
 .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+.song-sheet { overflow: visible; border: 0; background: transparent; }
+.song-sheet table { border-collapse: separate; border-spacing: 0 10px; }
+.song-sheet thead th { border: 0; padding-bottom: 4px; }
+.song-sheet tbody td {
+  background: linear-gradient(180deg, var(--sheen-2), transparent 46%), var(--card);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.song-sheet tbody td:first-child { border-left: 1px solid var(--line); border-radius: 18px 0 0 18px; }
+.song-sheet tbody td:last-child { border-right: 1px solid var(--line); border-radius: 0 18px 18px 0; }
+.song-sheet tbody tr:last-child td { border-bottom: 1px solid var(--line); }
+.song-sheet tbody tr:hover td { background: var(--card-2); border-color: var(--line-strong); }
+.song-sheet .mono { width: 72px; height: 72px; border-radius: 12px; }
+.song-sheet .mono img { transition: transform 220ms ease; }
+.song-sheet .release-open { border-radius: 14px; }
+.filters .pill { transition: transform 140ms ease, background 140ms ease, color 140ms ease; }
+.filters .pill:active { transform: scale(0.96); }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th { text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); font-weight: 600; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
@@ -826,7 +844,10 @@ a.glance-card:hover { border-color: var(--ink); }
 a.glance-card:active { transform: scale(0.98); }
 @media (hover: hover) {
   a.glance-card:hover { transform: translateY(-2px); }
+  .song-sheet tbody tr:hover .mono img { transform: scale(1.08); }
+  a.link-tile:hover .link-mark { transform: translateY(-1px); }
 }
+.link-mark { transition: transform 160ms ease, border-color 160ms ease; }
 .glance-card.gain { border-color: rgba(61, 220, 132, 0.55); }
 .glance-card.gain b { color: var(--good-read); }
 .glance-card.drop { border-color: rgba(255, 176, 32, 0.7); }
@@ -1042,6 +1063,17 @@ a.glance-card:active { transform: scale(0.98); }
     font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
   }
   .table-wrap td:first-child[data-label]::before { display: none; }
+  .song-sheet table { border-spacing: 0; }
+  .song-sheet tbody td,
+  .song-sheet tbody td:first-child,
+  .song-sheet tbody td:last-child { border: 0; border-radius: 0; background: transparent; }
+  .song-sheet tr {
+    border-radius: 18px; overflow: hidden;
+    background: linear-gradient(180deg, var(--sheen-3), transparent 42%), var(--card);
+    transition: transform 160ms ease, border-color 160ms ease;
+  }
+  .song-sheet tr:active { transform: scale(0.985); }
+  .song-sheet .mono { width: 84px; height: 84px; border-radius: 14px; }
 }
 
 .post-slot {
@@ -1218,9 +1250,11 @@ button.pill { background: transparent; cursor: pointer; min-height: 32px; }
 }
 .link-pin.on { color: var(--acid-ink); background: var(--acid); border-color: transparent; font-weight: 650; }
 .link-dock {
-  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(132px, 168px); gap: 8px;
-  overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 8px; margin: 0 -2px;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(148px, 180px); gap: 10px;
+  overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 10px; margin: 0 -2px;
+  scroll-padding-inline: 2px;
 }
+.link-tile .link-mark { box-shadow: inset 0 1px 0 var(--sheen); }
 .link-tile {
   scroll-snap-align: start; display: grid; gap: 8px; align-content: space-between; min-height: 132px;
   padding: 12px; text-decoration: none; color: inherit; border: 1px solid var(--line); border-radius: 16px;
