@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { DossierView } from "@/components/Dossier";
 import { Banner } from "@/components/ui";
-import { getDossier, listListenerLogs, listLogs } from "@/lib/db";
+import { getDossier, listExpenses, listListenerLogs, listLogs } from "@/lib/db";
+import { spendMarks } from "@/lib/promo";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +24,13 @@ export default async function ArtistPage({
   const file = await getDossier(id);
   if (!file) notFound();
   const listeners = await listListenerLogs(id);
-  const marks = (await listLogs())
-    .filter((entry) => entry.artist_id === id && entry.status !== "planned")
-    .map((entry) => ({ id: entry.id, log_date: entry.log_date, kind: entry.kind, title: entry.title }));
+  const [logged, expenses] = await Promise.all([listLogs(), listExpenses()]);
+  const marks = [
+    ...logged
+      .filter((entry) => entry.artist_id === id && entry.status !== "planned")
+      .map((entry) => ({ id: entry.id, log_date: entry.log_date, kind: entry.kind, title: entry.title })),
+    ...spendMarks(expenses),
+  ];
   return (
     <>
       <Banner message={error} />

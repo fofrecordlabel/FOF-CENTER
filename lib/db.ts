@@ -420,8 +420,9 @@ export async function listTracksForRelease(releaseId: string) {
 }
 
 export async function listReleaseChecks() {
-  return await many<{ release_id: string; bmi: number; mlc: number; soundexchange: number }>(
-    `SELECT release_id, MAX(bmi) AS bmi, MAX(mlc) AS mlc, MAX(soundexchange) AS soundexchange
+  return await many<{ release_id: string; bmi: number; mlc: number; soundexchange: number; sentric: number }>(
+    `SELECT release_id,
+       MIN(bmi) AS bmi, MIN(mlc) AS mlc, MIN(soundexchange) AS soundexchange, MIN(COALESCE(sentric, 0)) AS sentric
      FROM tracks
      WHERE release_id IS NOT NULL
      GROUP BY release_id`

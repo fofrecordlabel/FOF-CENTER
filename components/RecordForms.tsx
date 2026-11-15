@@ -279,6 +279,10 @@ export function TrackForm({
         <input type="checkbox" name="soundexchange" value="1" defaultChecked={track?.soundexchange === 1} />
         <span>SoundExchange</span>
       </label>
+      <label className="check">
+        <input type="checkbox" name="sentric" value="1" defaultChecked={track?.sentric === 1} />
+        <span>Sentric</span>
+      </label>
       <Field label="Notes" wide>
         <textarea name="notes" defaultValue={track?.notes ?? ""} />
       </Field>

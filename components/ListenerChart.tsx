@@ -87,12 +87,18 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
             <span className="spike">
               Spike <b>+{count(spike.delta)}</b>
               <em>{prettyDate(spike.to.log_date)}</em>
+              {campaigns(spike, marks).map((mark) => (
+                <em key={mark.id}>{mark.title}</em>
+              ))}
             </span>
           ) : null}
           {drop ? (
             <span className="drop">
               Drop <b>−{count(Math.abs(drop.delta))}</b>
               <em>{prettyDate(drop.to.log_date)}</em>
+              {campaigns(drop, marks).map((mark) => (
+                <em key={mark.id}>{mark.title}</em>
+              ))}
             </span>
           ) : null}
         </div>
@@ -199,6 +205,7 @@ export function ListenerChart({ logs, marks }: { logs: ListenerLog[]; marks: Cha
           <span>R promo</span>
           <span>B blog</span>
           <span>L playlist</span>
+          {marks.some((mark) => mark.kind === "spend") ? <span>$ spend</span> : null}
         </p>
       ) : null}
     </div>
@@ -269,7 +276,17 @@ function deltaLabel(delta: number | null) {
   return { text: "Flat" };
 }
 
+function campaigns(move: Move, marks: ChartMark[]) {
+  return marks.filter(
+    (mark) =>
+      (mark.kind === "promo" || mark.kind === "spend" || /smmfollows|streamingmafia|instagram ad|tiktok ad/i.test(mark.title)) &&
+      mark.log_date > move.from.log_date &&
+      mark.log_date <= move.to.log_date,
+  );
+}
+
 function markLetter(kind: string) {
+  if (kind === "spend") return "$";
   if (kind === "promo") return "R";
   if (kind === "blog") return "B";
   if (kind === "playlist") return "L";

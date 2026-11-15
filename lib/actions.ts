@@ -1073,7 +1073,26 @@ function trackFields(formData: FormData, artistId: string, releaseId: string | n
     bmi: flag(formData, "bmi"),
     mlc: flag(formData, "mlc"),
     soundexchange: flag(formData, "soundexchange"),
+    sentric: flag(formData, "sentric"),
   };
+}
+
+const REGISTRATION_FIELDS = ["bmi", "mlc", "soundexchange", "sentric"] as const;
+
+export async function setRegistration(formData: FormData) {
+  const next = safePath(str(formData, "next"), "/");
+  const id = str(formData, "id", 80);
+  const field = str(formData, "field", 20);
+  if (!id || !field || !REGISTRATION_FIELDS.includes(field as (typeof REGISTRATION_FIELDS)[number])) return;
+  const key = field as (typeof REGISTRATION_FIELDS)[number];
+  const track = await getTrack(id);
+  if (!track) go(next, "That song is not on file.");
+  const on = Number(track[key]) === 1 ? 0 : 1;
+  const names = { bmi: "BMI", mlc: "The MLC", soundexchange: "SoundExchange", sentric: "Sentric" };
+  await run(next, async () => {
+    await writeRow("tracks", track.id, { [key]: on });
+    await logActivity(track.artist_id, "Registration", `${track.title} ${on ? "is on" : "came off"} ${names[key]}.`);
+  });
 }
 
 function projectFields(formData: FormData, artistId: string | null, name: string) {

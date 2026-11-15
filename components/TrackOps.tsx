@@ -1,47 +1,131 @@
 import Link from "next/link";
-import { logTakedown, restoreTakedown } from "@/lib/actions";
-import { listReleaseChecks, listReleaseViews } from "@/lib/db";
+import { logTakedown, restoreTakedown, setRegistration } from "@/lib/actions";
+import { listReleaseChecks, listReleaseViews, listTrackViews } from "@/lib/db";
+import { Mono } from "@/components/ui";
 import { prettyDate, today } from "@/lib/format";
 import { STORES, labelFor } from "@/lib/labels";
 import type { Takedown, Track } from "@/lib/types";
 
-export async function OpenRegistrations() {
-  const checks = new Map((await listReleaseChecks()).map((row) => [row.release_id, row]));
-  const missing = (await listReleaseViews()).filter((release) => Number(checks.get(release.id)?.bmi ?? 0) !== 1);
+const FIELDS = [
+  ["bmi", "BMI"],
+  ["mlc", "MLC"],
+  ["soundexchange", "SX"],
+  ["sentric", "Sentric"],
+] as const;
+
+type Flags = Pick<Track, "bmi" | "mlc" | "soundexchange" | "sentric">;
+
+function registered(flags: Flags) {
+  return FIELDS.every(([key]) => Number(flags[key]) === 1);
+}
+
+export async function OpenRegistrations({ next = "/" }: { next?: string }) {
+  const tracks = (await listTrackViews()).slice().sort((a, b) => a.title.localeCompare(b.title));
+  const open = tracks.filter((track) => !registered(track));
+  const done = tracks.filter((track) => registered(track));
   return (
     <section className="card stack" id="registration">
-      <h2>Not registered</h2>
-      {missing.length ? (
-        <p>
-          <b>Not on BMI. </b>
-          {missing.map((release, index) => (
-            <span key={release.id}>
-              {index ? ", " : ""}
-              <Link href={`/releases/${release.id}`}>{release.title}</Link>
-            </span>
-          ))}
-        </p>
+      <div className="section-head">
+        <h2>{open.length ? `${open.length} still open` : "Registered"}</h2>
+        <Link href="/releases">Releases</Link>
+      </div>
+      {tracks.length ? (
+        <>
+          <div className="reg-board">
+            {(open.length ? open : done).map((track) => (
+              <RegistrationLine key={track.id} track={track} next={next} />
+            ))}
+          </div>
+          {open.length && done.length ? (
+            <details className="drawer">
+              <summary>{done.length} registered</summary>
+              <div className="reg-board">
+                {done.map((track) => (
+                  <RegistrationLine key={track.id} track={track} next={next} />
+                ))}
+              </div>
+            </details>
+          ) : null}
+        </>
       ) : (
-        <p>Every song is on BMI.</p>
+        <p className="meta">No songs on file yet.</p>
       )}
-      <p className="meta">MLC and SoundExchange are still open on every song.</p>
     </section>
   );
 }
 
-export function RegistrationMarks({ track }: { track: Pick<Track, "bmi" | "mlc" | "soundexchange"> }) {
-  const marks = [
-    ["BMI", track.bmi],
-    ["MLC", track.mlc],
-    ["SoundExchange", track.soundexchange],
-  ] as const;
+function RegistrationLine({ track, next }: { track: Flags & { id: string; title: string; artist_name?: string | null; release_title?: string | null }; next: string }) {
+  return (
+    <div className="reg-line">
+      <div>
+        <strong>{track.title}</strong>
+        <p className="meta">{[track.artist_name, track.release_title].filter(Boolean).join(" · ")}</p>
+      </div>
+      <div className="reg-toggles">
+        {FIELDS.map(([key, name]) => {
+          const on = Number(track[key]) === 1;
+          return (
+            <form action={setRegistration} className="mark-form" key={key}>
+              <input type="hidden" name="id" value={track.id} />
+              <input type="hidden" name="field" value={key} />
+              <input type="hidden" name="next" value={next} />
+              <button className={on ? "pill good" : "pill"} type="submit" aria-pressed={on}>
+                {name}
+              </button>
+            </form>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export async function ReleaseJobs() {
+  const [releases, checks] = await Promise.all([listReleaseViews(), listReleaseChecks()]);
+  const byRelease = new Map(checks.map((row) => [row.release_id, row]));
+  const open = releases.filter((release) => {
+    const flags = byRelease.get(release.id);
+    return !flags || !registered(flags);
+  });
+  if (!open.length) return null;
+  return (
+    <section className="section">
+      <div className="section-head">
+        <h2>Open releases</h2>
+        <Link href="/releases">Releases</Link>
+      </div>
+      <div className="job-list">
+        {open.map((release) => {
+          const flags = byRelease.get(release.id) ?? { bmi: 0, mlc: 0, soundexchange: 0, sentric: 0 };
+          return (
+            <Link className="job-card" href={`/releases/${release.id}`} key={release.id}>
+              <span className="cover-ring">
+                <Mono name={release.title} image={release.cover_url} />
+              </span>
+              <div>
+                <strong>{release.title}</strong>
+                <p className="meta">{[release.artist_name, release.distributor || "No distributor"].join(" · ")}</p>
+                <RegistrationMarks track={flags} />
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+export function RegistrationMarks({ track }: { track: Flags }) {
   return (
     <p className="marks">
-      {marks.map(([name, on]) => (
-        <span className={on ? "pill good" : "pill"} key={name}>
-          {on ? name : `${name} open`}
-        </span>
-      ))}
+      {FIELDS.map(([key, name]) => {
+        const on = Number(track[key]) === 1;
+        return (
+          <span className={on ? "pill good" : "pill"} key={key}>
+            {on ? name : `${name} open`}
+          </span>
+        );
+      })}
     </p>
   );
 }

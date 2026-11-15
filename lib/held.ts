@@ -119,7 +119,7 @@ function openHeld() {
     CREATE TABLE tracks (
       id TEXT PRIMARY KEY, release_id TEXT, artist_id TEXT, title TEXT, isrc TEXT, duration_sec INTEGER,
       track_number INTEGER, explicit INTEGER, writers TEXT, writer_ipis TEXT, producers TEXT,
-      master_owner TEXT, publishing TEXT, notes TEXT, bmi INTEGER, mlc INTEGER, soundexchange INTEGER,
+      master_owner TEXT, publishing TEXT, notes TEXT, bmi INTEGER, mlc INTEGER, soundexchange INTEGER, sentric INTEGER DEFAULT 0,
       audio_url TEXT, created_at TEXT
     );
     CREATE TABLE listener_logs (

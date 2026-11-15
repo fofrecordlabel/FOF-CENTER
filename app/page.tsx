@@ -2,13 +2,15 @@ import Link from "next/link";
 import { clearSampleDesk } from "@/lib/actions";
 import { ConfirmSubmit } from "@/components/controls";
 import { DailyTodos, PostNotifications } from "@/components/DeskToday";
-import { OpenRegistrations } from "@/components/TrackOps";
+import { OpenRegistrations, ReleaseJobs } from "@/components/TrackOps";
 import { ListenerBoard, type ChartMark } from "@/components/ListenerBoard";
+import { QuickLinks } from "@/components/QuickLinks";
 import { Balance, Banner, Mono, PageHeader, Pill } from "@/components/ui";
-import { dashboard, hasSample, listArtists, listListenerLogs, listLogs, listPostChecks, listReleaseViews, listTodos, rosterRows } from "@/lib/db";
+import { dashboard, hasSample, listArtists, listExpenses, listListenerLogs, listLogs, listPostChecks, listReleaseViews, listTodos, rosterRows } from "@/lib/db";
 import { dayStats, reminderMinutes } from "@/lib/checklist";
 import { ago, compact, deskMinutes, money, prettyDate, today } from "@/lib/format";
 import { POST_SLOTS } from "@/lib/posts";
+import { spendMarks } from "@/lib/promo";
 import { LOG_KINDS, STAGES, labelFor, lineClass, priorityTone, statusTone, RELEASE_STATUSES } from "@/lib/labels";
 
 export const metadata = { title: "Desk" };
@@ -16,7 +18,7 @@ export const metadata = { title: "Desk" };
 export default async function DeskPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const day = today();
-  const [desk, sample, roster, artists, listenerLogs, logs, todos, releaseViews, posted] = await Promise.all([
+  const [desk, sample, roster, artists, listenerLogs, logs, todos, releaseViews, posted, expenses] = await Promise.all([
     dashboard(),
     hasSample(),
     rosterRows(),
@@ -26,6 +28,7 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
     listTodos(),
     listReleaseViews(),
     listPostChecks(day),
+    listExpenses(),
   ]);
   const doneLogs = logs.filter((entry) => entry.status !== "planned");
   const todayCount = doneLogs.filter((entry) => entry.log_date === day).length;
@@ -43,6 +46,8 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
   const postedSlots = new Set(posted.map((row) => row.slot_time));
   const minute = deskMinutes();
   const openPostTimes = POST_SLOTS.filter((slot) => !postedSlots.has(slot.time) && (reminderMinutes(slot.time) ?? 0) <= minute).length;
+  const checkPct = todayChecks.total ? Math.round((todayChecks.done / todayChecks.total) * 100) : 0;
+  const moveLabel = !hasListeners ? null : listenerMove > 0 ? `+${compact(listenerMove)}` : listenerMove < 0 ? compact(listenerMove) : "Flat";
 
   return (
     <>
@@ -67,11 +72,20 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
 
       <section className="glance" aria-label="Desk at a glance">
         <a className={`glance-card ${listenerMove < 0 ? "drop" : listenerMove > 0 ? "gain" : ""}`} href="#listeners">
-          <b>{hasListeners ? compact(listenerTotal) : "—"}</b>
+          <div className="glance-top">
+            <b>{hasListeners ? compact(listenerTotal) : "—"}</b>
+            {moveLabel ? <em className={listenerMove > 0 ? "up" : listenerMove < 0 ? "down" : ""}>{moveLabel}</em> : null}
+          </div>
+          <div className="glance-bar" aria-hidden>
+            <i style={{ width: `${Math.max(6, Math.min(100, hasListeners ? (listenerTotal / 100000) * 100 : 0))}%` }} />
+          </div>
           <span>Monthly listeners</span>
         </a>
         <Link className={`glance-card ${todayChecks.total > 0 && todayChecks.done === todayChecks.total ? "gain" : ""}`} href="/checklist">
-          <b>{todayChecks.total ? `${todayChecks.done}/${todayChecks.total}` : "—"}</b>
+          <div className="glance-top">
+            <b>{todayChecks.total ? `${todayChecks.done}/${todayChecks.total}` : "—"}</b>
+            <i className="glance-ring" style={{ ["--fill" as string]: `${checkPct}%` }} aria-hidden />
+          </div>
           <span className="pips" aria-hidden>
             {Array.from({ length: 7 }, (_, index) => (
               <i key={index} className={index < (todayChecks.total ? Math.round((todayChecks.done / todayChecks.total) * 7) : 0) ? "on" : undefined} />
@@ -80,15 +94,40 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
           <span>Checklist today</span>
         </Link>
         <a className={`glance-card ${duePosts.length + openPostTimes > 0 ? "hot" : ""}`} href="#today">
-          <b>{duePosts.length + openPostTimes}</b>
+          <div className="glance-top">
+            <b>{duePosts.length + openPostTimes}</b>
+            <span className="slot-dots" aria-hidden>
+              {POST_SLOTS.map((slot) => {
+                const postedSlot = postedSlots.has(slot.time);
+                const due = !postedSlot && (reminderMinutes(slot.time) ?? 0) <= minute;
+                return <i key={slot.time} className={postedSlot ? "done" : due ? "due" : undefined} />;
+              })}
+            </span>
+          </div>
           <span>Posts due</span>
         </a>
         <Link className={`glance-card ${todayCount > 0 ? "gain" : ""}`} href="/log">
-          <b>{todayCount}</b>
+          <div className="glance-top">
+            <b>{todayCount}</b>
+          </div>
+          <div className="kind-row" aria-hidden>
+            {todayLogs.slice(0, 3).map((entry) => (
+              <i key={entry.id}>{labelFor(LOG_KINDS, entry.kind).slice(0, 1)}</i>
+            ))}
+          </div>
           <span>Logged today</span>
         </Link>
       </section>
 
+      <section className="section">
+        <div className="section-head">
+          <h2>Open a desk</h2>
+          <Link href="/links">All links</Link>
+        </div>
+        <QuickLinks mode="dock" />
+      </section>
+
+      <ReleaseJobs />
       <OpenRegistrations />
 
       <section className="section stack" id="listeners">
@@ -97,7 +136,7 @@ export default async function DeskPage({ searchParams }: { searchParams: Promise
             key={artist.id}
             artist={artist}
             logs={listenerLogs.filter((log) => log.artist_id === artist.id)}
-            marks={doneLogs.filter((entry) => entry.artist_id === artist.id).map(chartMark)}
+            marks={[...doneLogs.filter((entry) => entry.artist_id === artist.id).map(chartMark), ...spendMarks(expenses)]}
             next="/"
           />
         ))}
