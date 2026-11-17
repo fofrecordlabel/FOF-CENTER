@@ -62,6 +62,14 @@ function TabIcon({ name }: { name: string }) {
       </svg>
     );
   }
+  if (name === "files") {
+    return (
+      <svg {...props}>
+        <path d="M3 7.5V18a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2.5Z" />
+        <path d="M3 10h18" />
+      </svg>
+    );
+  }
   return (
     <svg {...props}>
       <rect x="4" y="4" width="7" height="7" rx="1.5" />
@@ -85,6 +93,7 @@ const TABS = [
   { href: "/log", label: "Log", icon: "log" },
   { href: "/#listeners", label: "Listeners", icon: "wave" },
   { href: "/links", label: "Links", icon: "link" },
+  { href: "/files", label: "Files", icon: "files" },
 ];
 
 const GROUPS = [

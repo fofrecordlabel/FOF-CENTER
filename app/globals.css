@@ -933,7 +933,7 @@ a.glance-card:active { transform: scale(0.98); }
   .tabbar {
     display: grid;
     grid-area: tabs;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     position: relative;
     top: auto;
     bottom: auto;
