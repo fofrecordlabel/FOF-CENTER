@@ -55,6 +55,10 @@ export function VaultDrop({ category }: { category: string }) {
   return (
     <section
       className={over ? "vault-drop over" : "vault-drop"}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        if (!busy) setOver(true);
+      }}
       onDragOver={(event) => {
         event.preventDefault();
         if (!busy) setOver(true);
@@ -69,12 +73,12 @@ export function VaultDrop({ category }: { category: string }) {
       }}
     >
       <label className="vault-pick">
-        <strong>{busy ? "Saving…" : "Drop files here"}</strong>
-        <span>PDFs and pictures. Tap to choose more than one.</span>
+        <strong>{busy ? "Saving…" : "Add pictures"}</strong>
+        <span>Tap here to choose photos, screenshots, or PDFs. You can also drop them in.</span>
         <input
           type="file"
           multiple
-          accept="application/pdf,image/jpeg,image/png,image/webp,image/gif,.pdf,.jpg,.jpeg,.png,.webp,.gif"
+          accept="image/*,application/pdf,.pdf,.heic,.heif,.jpg,.jpeg,.png,.webp,.gif"
           disabled={busy}
           onChange={(event) => {
             const chosen = event.currentTarget.files;
@@ -114,29 +118,27 @@ export function VaultDrop({ category }: { category: string }) {
 }
 
 async function sendFile(file: File, category: string, notes: string, onProgress: (percent: number) => void) {
-  if (!file.size) throw new Error("That file is empty.");
-  if (file.size > MAX_BYTES) throw new Error("That file is over 25 MB.");
-  if (/\.(heic|heif)$/i.test(file.name) || file.type === "image/heic" || file.type === "image/heif") {
-    throw new Error("Save that screenshot as a JPEG or PNG.");
-  }
+  const ready = await readyFile(file);
+  if (!ready.size) throw new Error("That file is empty.");
+  if (ready.size > MAX_BYTES) throw new Error("That file is over 25 MB.");
   const id = crypto.randomUUID();
-  const total = Math.max(1, Math.ceil(file.size / CHUNK));
+  const total = Math.max(1, Math.ceil(ready.size / CHUNK));
   let sent = 0;
   for (let part = 0; part < total; part += 1) {
     const start = part * CHUNK;
-    const slice = file.slice(start, Math.min(file.size, start + CHUNK));
-    onProgress(Math.min(99, Math.round((sent / file.size) * 100)));
+    const slice = ready.slice(start, Math.min(ready.size, start + CHUNK));
+    onProgress(Math.min(99, Math.round((sent / ready.size) * 100)));
     const body = new FormData();
     body.set("id", id);
     body.set("part", String(part));
     body.set("total", String(total));
-    body.set("name", file.name);
-    body.set("title", fileTitle(file.name));
+    body.set("name", ready.name);
+    body.set("title", fileTitle(ready.name));
     body.set("category", category);
     if (notes.trim()) body.set("notes", notes.trim());
-    body.set("file", slice, file.name);
+    body.set("file", slice, ready.name);
     const payload = await postChunk(body, (loaded) => {
-      onProgress(Math.min(99, Math.round(((sent + Math.min(slice.size, loaded)) / file.size) * 100)));
+      onProgress(Math.min(99, Math.round(((sent + Math.min(slice.size, loaded)) / ready.size) * 100)));
     });
     if (part === total - 1) {
       if (!payload?.done || typeof payload.url !== "string") throw new Error("The file did not finish saving.");
@@ -146,6 +148,44 @@ async function sendFile(file: File, category: string, notes: string, onProgress:
     sent += slice.size;
   }
   throw new Error("The file did not finish saving.");
+}
+
+async function readyFile(file: File) {
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  if (knownFile(head)) return file;
+  const blob = await drawJpeg(file);
+  const base = file.name.replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, "").trim() || "picture";
+  return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+}
+
+async function drawJpeg(file: File) {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error("Could not read that picture.");
+  }
+  const max = 4096;
+  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not read that picture.");
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+  if (!blob) throw new Error("Could not read that picture.");
+  return blob;
+}
+
+function knownFile(bytes: Uint8Array) {
+  if (bytes.length >= 5 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return true;
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return true;
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return true;
+  if (bytes.length >= 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return true;
+  if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57 && bytes[9] === 0x45) return true;
+  return false;
 }
 
 function fileTitle(name: string) {
