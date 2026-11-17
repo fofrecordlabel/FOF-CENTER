@@ -122,6 +122,10 @@ const GROUPS = [
     label: "Outside",
     items: [{ href: "/links", label: "Quicklinks" }],
   },
+  {
+    label: "Library",
+    items: [{ href: "/files", label: "Gallery & files" }],
+  },
 ];
 
 const NAV = GROUPS.flatMap((group) => group.items);

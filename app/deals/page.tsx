@@ -14,7 +14,11 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader kicker="Business affairs" title="Deals" lede="Term sheets through executed agreements. Only executed, recoupable advances hit the royalty balance." />
+      <PageHeader kicker="Business affairs" title="Deals" lede="Term sheets through executed agreements. Only executed, recoupable advances hit the royalty balance.">
+        <Link className="btn" href="/files?cat=deals">
+          Deal PDFs
+        </Link>
+      </PageHeader>
       <Banner message={error} />
       <div className="table-wrap">
         <table>

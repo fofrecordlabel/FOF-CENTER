@@ -40,6 +40,14 @@ export function count(value: number | null | undefined) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
+export function fileSize(bytes: number | null | undefined) {
+  const size = bytes ?? 0;
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+  const mb = size / (1024 * 1024);
+  return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
+}
+
 export function prettyDate(value: string | null | undefined) {
   if (!value) return "—";
   if (/^\d{4}$/.test(value)) return value;

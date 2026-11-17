@@ -287,6 +287,17 @@ export type CampaignBooking = {
 export type PersonLink = { id: string; name: string; relationship: string | null };
 export type PersonView = Person & { artists: PersonLink[] };
 
+export type VaultFile = {
+  id: string;
+  title: string;
+  category: string;
+  notes: string | null;
+  mime: string;
+  name: string | null;
+  size: number;
+  created_at: string;
+};
+
 export type MoneySnapshot = {
   advance: number;
   recouped: number;

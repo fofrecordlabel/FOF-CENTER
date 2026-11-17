@@ -187,6 +187,13 @@ export const ROYALTY_SOURCES: Choice[] = [
   { value: "other", label: "Other" },
 ];
 
+export const VAULT_CATEGORIES: Choice[] = [
+  { value: "docs", label: "Important docs" },
+  { value: "screenshots", label: "Screenshots" },
+  { value: "agreements", label: "Agreements" },
+  { value: "deals", label: "Deal PDFs" },
+];
+
 export function values(list: Choice[]) {
   return list.map((item) => item.value);
 }

@@ -15,7 +15,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!audio || size <= SLICE) {
     const file = await readMedia(id, 0, size);
     if (!file) return new Response("Not found", { status: 404 });
-    return fileResponse(file.bytes, file.mime, 200, { "Accept-Ranges": "bytes", "Cache-Control": "private, max-age=3600" });
+    const headers: Record<string, string> = { "Accept-Ranges": "bytes", "Cache-Control": "private, max-age=3600" };
+    if (!audio) {
+      headers["X-Content-Type-Options"] = "nosniff";
+      headers["Content-Disposition"] = `inline; filename="${safeName(file.name, file.mime)}"`;
+    }
+    return fileResponse(file.bytes, file.mime, 200, headers);
   }
   let start = 0;
   let end = Math.min(SLICE, size) - 1;
@@ -36,6 +41,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     "Cache-Control": "private, max-age=3600",
     "Content-Range": `bytes ${start}-${end}/${size}`,
   });
+}
+
+function safeName(name: string | null, mime: string) {
+  const ext = mime === "application/pdf" ? "pdf" : mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : mime === "image/gif" ? "gif" : "jpg";
+  const cleaned = (name || "file").replace(/[\r\n"\\]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^\.+/, "").slice(0, 80);
+  const base = cleaned || "file";
+  return base.includes(".") ? base : `${base}.${ext}`;
 }
 
 function fileResponse(bytes: Uint8Array, mime: string, status: number, headers: Record<string, string>) {

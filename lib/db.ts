@@ -35,6 +35,7 @@ import type {
   Takedown,
   Track,
   TrackView,
+  VaultFile,
 } from "./types";
 
 let deskReady: Promise<void> | null = null;
@@ -639,9 +640,21 @@ export async function clearSample() {
   await logActivity(null, "Desk", "Sample artists cleared.");
 }
 
+const VAULT_LIST = `SELECT vault.id, vault.title, vault.category, vault.notes, vault.created_at,
+            files.mime, files.name, octet_length(files.bytes)::int AS size
+     FROM vault JOIN files ON files.id = vault.id`;
+
+export async function listVault() {
+  return await many<VaultFile>(`${VAULT_LIST} ORDER BY vault.created_at DESC`);
+}
+
+export async function getVault(id: string) {
+  return await one<VaultFile>(`${VAULT_LIST} WHERE vault.id = ?`, id);
+}
+
 export async function searchDesk(query: string) {
   const q = query.trim();
-  const empty = { artists: [] as Artist[], people: [] as PersonView[], releases: [] as ReleaseView[], tracks: [] as TrackView[], projects: [] as ProjectView[], influencers: [] as Influencer[] };
+  const empty = { artists: [] as Artist[], people: [] as PersonView[], releases: [] as ReleaseView[], tracks: [] as TrackView[], projects: [] as ProjectView[], influencers: [] as Influencer[], files: [] as VaultFile[] };
   if (!q) return empty;
   const like = `%${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
   const artists = await many<Artist>(
@@ -693,7 +706,17 @@ export async function searchDesk(query: string) {
     like
   );
   const projects = (await listProjectViews()).filter((project) => project.name.toLowerCase().includes(q.toLowerCase()));
-  return { artists, people, releases, tracks, projects, influencers };
+  const files = await many<VaultFile>(
+    `${VAULT_LIST}
+     WHERE vault.title LIKE ? ESCAPE '\\'
+        OR COALESCE(vault.notes, '') LIKE ? ESCAPE '\\'
+        OR COALESCE(files.name, '') LIKE ? ESCAPE '\\'
+     ORDER BY vault.created_at DESC LIMIT 25`,
+    like,
+    like,
+    like
+  );
+  return { artists, people, releases, tracks, projects, influencers, files };
 }
 
 export async function changeStage(id: string, stage: string) {

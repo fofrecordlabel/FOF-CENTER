@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Banner, Mono, PageHeader } from "@/components/ui";
 import { searchDesk } from "@/lib/db";
-import { INFLUENCER_STATUSES, PLATFORMS, STAGES, labelFor } from "@/lib/labels";
+import { INFLUENCER_STATUSES, PLATFORMS, STAGES, VAULT_CATEGORIES, labelFor } from "@/lib/labels";
 
 export const metadata = { title: "Search" };
 
@@ -9,11 +9,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const { q = "", error } = await searchParams;
   const query = q.trim();
   const hits = await searchDesk(query);
-  const empty = !hits.artists.length && !hits.people.length && !hits.releases.length && !hits.tracks.length && !hits.projects.length && !hits.influencers.length;
+  const empty = !hits.artists.length && !hits.people.length && !hits.releases.length && !hits.tracks.length && !hits.projects.length && !hits.influencers.length && !hits.files.length;
 
   return (
     <>
-      <PageHeader kicker="Search" title={query ? query : "Search the desk"} lede="Artists, people, releases, masters, and budgets." />
+      <PageHeader kicker="Search" title={query ? query : "Search the desk"} lede="Artists, people, releases, masters, budgets, and files." />
       <Banner message={error} />
       {!query ? <p className="meta">Type a name in the search bar.</p> : null}
       {query && empty ? <div className="empty"><p>Nothing matched “{query}”.</p></div> : null}
@@ -72,6 +72,17 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
               <strong>{person.name}</strong>
               <p className="meta">{[labelFor(PLATFORMS, person.platform), person.handle, labelFor(INFLUENCER_STATUSES, person.status)].filter(Boolean).join(" · ")}</p>
             </a>
+          ))}
+        </section>
+      ) : null}
+      {hits.files.length ? (
+        <section className="section stack">
+          <h2>Files</h2>
+          {hits.files.map((file) => (
+            <Link key={file.id} className="card" href={`/files/${file.id}`}>
+              <strong>{file.title}</strong>
+              <p className="meta">{labelFor(VAULT_CATEGORIES, file.category)}</p>
+            </Link>
           ))}
         </section>
       ) : null}

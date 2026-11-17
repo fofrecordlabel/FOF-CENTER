@@ -25,6 +25,7 @@ import {
   getTodo,
   getTakedown,
   getTrack,
+  getVault,
   listTemplates,
   linkPerson,
   logActivity,
@@ -39,7 +40,7 @@ import { reminderMinutes } from "@/lib/checklist";
 import { POST_SLOTS } from "@/lib/posts";
 import { codesMatch, deskToken } from "@/lib/gate";
 import { today } from "@/lib/format";
-import { CAMPAIGN_STATUSES, CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, DISTRIBUTORS, EXPENSE_CATEGORIES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, STORES, labelFor, values } from "@/lib/labels";
+import { CAMPAIGN_STATUSES, CONTACT_KINDS, DEAL_STATUSES, DEAL_TYPES, DISTRIBUTORS, EXPENSE_CATEGORIES, INFLUENCER_STATUSES, LOG_KINDS, PLATFORMS, PRIORITIES, PROJECT_KINDS, PROJECT_STATUSES, RELEASE_STATUSES, RELEASE_TYPES, ROLES, ROYALTY_SOURCES, SPLIT_ROLES, STAGES, STORES, VAULT_CATEGORIES, labelFor, values } from "@/lib/labels";
 import { day, dollars, flag, httpUrl, mediaUrl, oneOf, optFloat, optInt, parseDuration, percent, safePath, str } from "@/lib/parse";
 import { forgetMedia } from "@/lib/media";
 import { exec, insert, uid } from "@/lib/sql";
@@ -327,6 +328,34 @@ export async function deleteExpense(formData: FormData) {
   await run(next, async () => {
     await destroy("expenses", id);
   });
+}
+
+export async function updateVaultFile(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), id ? `/files/${id}` : "/files");
+  const title = str(formData, "title", 180);
+  if (!id || !title) go(next, "A file needs a name.");
+  const row = await getVault(id);
+  if (!row) go(next, "That file is not on the desk.");
+  const category = oneOf(str(formData, "category", 40), values(VAULT_CATEGORIES), "docs");
+  await run(next, async () => {
+    await writeRow("vault", id, { title, category, notes: str(formData, "notes", 500) });
+  });
+}
+
+export async function deleteVaultFile(formData: FormData) {
+  const id = str(formData, "id", 80);
+  const next = safePath(str(formData, "next"), "/files");
+  if (!id) return;
+  await run(next, async () => {
+    const row = await getVault(id);
+    if (!row) return;
+    await destroy("vault", id);
+    await forgetMedia(`/media/${id}`);
+    await logActivity(null, "File", `${row.title} removed.`);
+  });
+  revalidatePath("/files");
+  redirect(next);
 }
 
 export async function updateTrack(formData: FormData) {
